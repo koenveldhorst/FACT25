@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu
+#SBATCH --gpus=1
+#SBATCH --job-name=B2T
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=18
+#SBATCH --time=00:07:00
+#SBATCH --output=slurm_inference/Inference_slurm_output_%A.out
+
+module purge
+module load 2023
+module load Anaconda3/2023.07-2
+
+# Your job starts in the directory where you call sbatch
+cd $HOME/FACT25/
+# Activate your environment
+source activate b2t
+
+# Run your code
+pipenv run python -u b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
+# srun python -u b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth

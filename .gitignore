@@ -1,0 +1,10 @@
+data/celebA/
+data/cub/
+model/*
+result/
+diff/
+function/clipcap.pt
+__pycache__
+
+slurm_inference/*
+slurm*
