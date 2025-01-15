@@ -13,10 +13,13 @@ module load 2023
 module load Anaconda3/2023.07-2
 
 # Your job starts in the directory where you call sbatch
-cd $HOME/FACT25/
+cd $HOME/repo/
 # Activate your environment
 source activate b2t
 
 # Run your code
-pipenv run python -u b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
+# pipenv run python -u b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
 # srun python -u b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
+
+srun python b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
+# srun python b2t.py --dataset celeba --model best_model_CelebA_erm.pth
