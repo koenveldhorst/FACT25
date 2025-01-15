@@ -239,7 +239,7 @@ prefix_length = 10
 
 caption_model = ClipCaptionModel(prefix_length)
 
-caption_model.load_state_dict(torch.load('function/clipcap.pt', map_location=CPU)) 
+caption_model.load_state_dict(torch.load('function/clipcap.pt', map_location=CPU), strict=False) 
 
 caption_model = caption_model.eval()
 caption_model = caption_model.to(clip_device)

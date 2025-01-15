@@ -18,11 +18,12 @@ import waterbirds_templates
 
 
 def main(args):
-    model, preprocess = clip.load('RN50', 'cuda', jit=False)  # RN50, RN101, RN50x4, ViT-B/32
+    model, preprocess = clip.load('RN50', jit=False)  # RN50, RN101, RN50x4, ViT-B/32
 
     crop = transforms.Compose([transforms.Resize(224), transforms.CenterCrop(224)])
     transform = transforms.Compose([crop, preprocess])
 
+    # load dataset
     if args.dataset == 'waterbirds':
         data_dir = os.path.join(args.data_dir, 'waterbird_complete95_forest2water2')
         train_dataset = Waterbirds(data_dir=data_dir, split='train', transform=transform)
@@ -41,6 +42,7 @@ def main(args):
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=256, num_workers=4, drop_last=False)
     temperature = 0.02  # redundant parameter
 
+    # get average CLIP embedding from multiple template prompts
     with torch.no_grad():
         zeroshot_weights = []
         for class_keywords in class_keywords_all:
@@ -55,8 +57,10 @@ def main(args):
             zeroshot_weights.append(class_embedding)
         zeroshot_weights = torch.stack(zeroshot_weights, dim=1).cuda()
 
+    # run CLIP zero-shot classifier
     preds_minor, preds, targets_minor = [], [], []
     with torch.no_grad():
+        # TODO: what is target_g
         for (image, (target, target_g, target_s), _) in tqdm(train_dataloader):
             image = image.cuda()
             image_features = model.encode_image(image)
@@ -64,6 +68,7 @@ def main(args):
 
             logits = image_features @ zeroshot_weights / temperature
 
+            # get classifier predictions
             probs = logits.softmax(dim=-1).cpu()
             conf, pred = torch.max(probs, dim=1)
 

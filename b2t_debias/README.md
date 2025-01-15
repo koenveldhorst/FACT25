@@ -9,7 +9,7 @@ Make sure to run following code under this directory `b2t/b2t_debias`.
 To reproduce the results corresponding to Table 3 in our paper, run following script.
 
 ```bash
-$ python infer_group_label.py --data-dir [PATH TO DATASET] --dataset [DATASET] --save_path pseudo_bias/[DATASET].pt
+$ python infer_group_label.py --data_dir [PATH TO DATASET] --dataset [DATASET] --save_path pseudo_bias/[DATASET].pt
 ```
 
 ###  Training debiased classifiers
