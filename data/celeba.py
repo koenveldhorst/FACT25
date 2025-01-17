@@ -37,7 +37,7 @@ class CelebA(Dataset):
         self.targets = torch.tensor(self.y_array)
         self.targets_group = torch.tensor(self.group_array)
         self.targets_spurious = torch.tensor(self.confounder_array)
-
+ 
         self.transform = transform
 
         self.n_classes = 2
