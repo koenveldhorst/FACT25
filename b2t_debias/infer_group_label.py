@@ -63,7 +63,7 @@ def main(args):
     preds_minor, preds, targets_minor = [], [], []
     with torch.no_grad():
         # TODO: what is target_g
-        for (image, (target, target_g, target_s), _) in tqdm(train_dataloader):
+        for (image, (target, target_g, target_s), *_) in tqdm(train_dataloader):
             image = image.cuda()
             image_features = model.encode_image(image)
             image_features /= image_features.norm(dim=-1, keepdim=True)
