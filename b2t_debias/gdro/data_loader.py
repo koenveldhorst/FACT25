@@ -140,7 +140,8 @@ def prepare_celeba(args):
     group = celeba_valid.targets * 2 + celeba_valid.biases
     valid_indices = list()
     for i in range(4):
-        valid_indices.append(np.where(group == i)[0][:int(len(np.where(group == i)[0])*args.val_frac)])
+        val_frac = 1.0
+        valid_indices.append(np.where(group == i)[0][:int(len(np.where(group == i)[0])*val_frac)])
     valid_indices = np.concatenate(valid_indices)
     valid_indices.sort()
     valid_dataset = Subset(celeba_valid, valid_indices)
