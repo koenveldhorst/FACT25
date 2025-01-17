@@ -1,5 +1,7 @@
 import numpy as np
 import torchvision.transforms as transforms
+import torchvision.datasets as dataset
+import torchvision.models as models
 from torch.utils.data import DataLoader
 import torch
 import clip
@@ -52,9 +54,21 @@ elif args.dataset == 'celeba':
     preprocess = get_transform_celeba()
     class_names = ['not blond', 'blond']
     # group_names = ['not blond_female', 'not blond_male', 'blond_female', 'blond_male']
-    image_dir = 'data/celebA/data/img_align_celeba/'
+    image_dir = 'data/celebA/data/image_align_celeba'
     caption_dir = 'data/celebA/caption/'
     val_dataset = CelebA(data_dir='data/celebA/data/', split='val', transform=preprocess)
+elif args.dataset == 'imagenet-r':
+    preprocess = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    class_names = [str(i) for i in range(200)]
+    # tested on subset of data, to test on real data: use 'data/imagenetR/data/imagenet-r/'
+    image_dir = ''
+    caption_dir = 'data/imagenetR/caption/'
+    val_dataset = dataset.ImageFolder(root="data/imagenetR/data/imagenet-r-test", transform=preprocess)
 
 val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=256, num_workers=4, drop_last=False)
 
@@ -72,67 +86,131 @@ if not os.path.exists(diff_dir):
 # extract caption
 if args.extract_caption:
     print("Start extracting captions..")
-    for x, (y, y_group, y_spurious), idx, path in tqdm(val_dataset):
-        image_path = image_dir + path
-        caption = extract_caption(image_path)
-        if not os.path.exists(caption_dir):
-            os.makedirs(caption_dir)
-        caption_path = caption_dir + path.split("/")[-1][:-4] + ".txt"
-        with open(caption_path, 'w') as f:
-            f.write(caption)
+    if args.dataset == 'imagenet-r':
+        for idx, (x, y) in tqdm(enumerate(val_dataset)):
+                image_path = val_dataset.imgs[idx][0]
+                caption = extract_caption(image_path)
+                if not os.path.exists(caption_dir):
+                    os.makedirs(caption_dir)
+                folder_name = os.path.basename(os.path.dirname(image_path))  
+                image_filename = os.path.basename(image_path)  
+                caption_filename = folder_name + "_" + image_filename.split('.')[0] + ".txt"  
+                caption_path = os.path.join(caption_dir, caption_filename)
+                # caption_path = os.path.join(caption_dir, os.path.basename(os.path.dirname(image_path)).split('.')[0] + ".txt")
+                with open(caption_path, 'w') as f:
+                    f.write(caption)
+    else:
+        for x, (y, y_group, y_spurious), idx, path in tqdm(val_dataset):
+            image_path = image_dir + path
+            caption = extract_caption(image_path)
+            if not os.path.exists(caption_dir):
+                os.makedirs(caption_dir)
+            caption_path = caption_dir + path.split("/")[-1][:-4] + ".txt"
+            with open(caption_path, 'w') as f:
+                f.write(caption)
     print("Captions of {} images extracted".format(len(val_dataset)))
 
 # correctify dataset
 result_path = result_dir + args.dataset +"_" +  args.model.split(".")[0] + ".csv"
 if not os.path.exists(result_path):
-    model = torch.load(model_dir + args.model)
-    model = model.to(device)
-    model.eval()
-    start_time = time.time()
-    print("Pretrained model \"{}\" loaded".format(args.model))
+    if args.dataset == 'imagenet-r':
+        model = models.resnet50(pretrained=False)
+        checkpoint = torch.load(model_dir + args.model, map_location=torch.device('cpu'))
+        model.load_state_dict(checkpoint)
+        model = model.to(device)
+        model.eval()
+        start_time = time.time()
+        print("Pretrained model \"{}\" loaded".format(args.model))
+    else: 
+        model = torch.load(model_dir + args.model, map_location=torch.device('cpu'))
+        model = model.to(device)
+        model.eval()
+        start_time = time.time()
+        print("Pretrained model \"{}\" loaded".format(args.model))
 
-    result = {"image":[],
-            "pred":[],
-            "actual":[],
-            "group":[],
-            "spurious":[],                
-            "correct":[],
-            "caption":[],
-            }
+    if args.dataset == 'imagenet-r':
+        result = {"image":[],
+                "pred":[],
+                "actual":[],              
+                "correct":[],
+                "caption":[],
+                }
+    else: 
+        result = {"image":[],
+                "pred":[],
+                "actual":[],
+                "group":[],
+                "spurious":[],                
+                "correct":[],
+                "caption":[],
+                }
 
     with torch.no_grad():
         running_corrects = 0
-        for (images, (targets, targets_g, targets_s), index, paths) in tqdm(val_dataloader):
-            images = images.to(device)
-            targets = targets.to(device)
-            outputs = model(images)
-            _, preds = torch.max(outputs, 1)
-            for i in range(len(preds)):
-                image = paths[i]
-                pred = preds[i]
-                actual = targets[i]
-                group = targets_g[i]
-                spurious = targets_s[i]
-                caption_path = caption_dir + image.split("/")[-1][:-4] + ".txt"
-                with open(caption_path, "r") as f:
-                    caption = f.readline()
-                result['image'].append(image)
-                result['pred'].append(pred.item())
-                result['actual'].append(actual.item())
-                result['group'].append(group.item())
-                result['spurious'].append(spurious.item())
-                result['caption'].append(caption)
-                if pred == actual:
-                        result['correct'].append(1)
-                        running_corrects += 1
-                else:
-                        result['correct'].append(0)
+        if args.dataset == 'imagenet-r':
+            for idx, (images, targets) in tqdm(enumerate(val_dataloader)):
+                images = images.to(device)
+                targets = targets.to(device)
+                outputs = model(images)
+                _, preds = torch.max(outputs, 1)
+                paths = [val_dataset.imgs[i][0] for i in range(len(targets))]
+                for i in range(len(preds)):
+                    image = paths[i]
+                    pred = preds[i]
+                    actual = targets[i]
+                    folder_name = os.path.basename(os.path.dirname(image))  
+                    image_filename = os.path.basename(image)  
+                    caption_filename = folder_name + "_" + image_filename.split('.')[0] + ".txt"  
+                    caption_path = os.path.join(caption_dir, caption_filename)
+                    with open(caption_path, "r") as f:
+                        caption = f.readline()
+                    result['image'].append(image)
+                    result['pred'].append(pred.item())
+                    result['actual'].append(actual.item())
+                    result['caption'].append(caption)
+                    if pred == actual:
+                            result['correct'].append(1)
+                            running_corrects += 1
+                    else:
+                            result['correct'].append(0)
+        else:
+            for (images, (targets, targets_g, targets_s), index, paths) in tqdm(val_dataloader):
+                images = images.to(device)
+                targets = targets.to(device)
+                outputs = model(images)
+                _, preds = torch.max(outputs, 1)
+                for i in range(len(preds)):
+                    image = paths[i]
+                    pred = preds[i]
+                    actual = targets[i]
+                    group = targets_g[i]
+                    spurious = targets_s[i]
+                    caption_path = caption_dir + image.split("/")[-1][:-4] + ".txt"
+                    with open(caption_path, "r") as f:
+                        caption = f.readline()
+                    result['image'].append(image)
+                    result['pred'].append(pred.item())
+                    result['actual'].append(actual.item())
+                    result['group'].append(group.item())
+                    result['spurious'].append(spurious.item())
+                    result['caption'].append(caption)
+                    if pred == actual:
+                            result['correct'].append(1)
+                            running_corrects += 1
+                    else:
+                            result['correct'].append(0)
 
         print("# of correct examples : ", running_corrects)
         print("# of wrong examples : ", len(val_dataset) - running_corrects)
         print("# of all examples : ", len(val_dataset))
         print("Accuracy : {:.2f} %".format(running_corrects/len(val_dataset)*100))
-
+    print(result)
+    print('image', len(result['image']))
+    print('pred',len(result['pred']))
+    print('actual',len(result['actual']))
+    print('caption',len(result['caption']))
+    print('correct',len(result['correct']))
+    
     df = pd.DataFrame(result)
     df.to_csv(result_path)
     print("Classified result stored")
