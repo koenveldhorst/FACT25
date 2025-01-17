@@ -31,7 +31,9 @@ def main(args):
         class_templates = waterbirds_templates.class_templates
         class_keywords_all = waterbirds_templates.class_keywords_all
     elif args.dataset == 'celeba':
-        data_dir = os.path.join(args.data_dir, 'celeba')
+        # TODO: why so inconsistent with dataset loading
+        # data_dir = os.path.join(args.data_dir, 'celeba')
+        data_dir = args.data_dir
         train_dataset = CelebA(data_dir=data_dir, split='train', transform=transform)
         templates = celeba_templates.templates
         class_templates = celeba_templates.class_templates

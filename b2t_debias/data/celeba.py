@@ -13,13 +13,13 @@ from PIL import Image
 
 
 class CelebA(Dataset):
-    def __init__(self, data_dir='/data/celeba', split='train', transform=None):
+    def __init__(self, data_dir='/data/celebA', split='train', transform=None):
         self.data_dir = data_dir
         self.split = split
         self.split_dict = {'train': 0, 'val': 1, 'test': 2}
 
-        self.metadata_df = pd.read_csv(os.path.join(self.data_dir, 'list_attr_celeba.csv'), delim_whitespace=True)
-        self.split_df = pd.read_csv(os.path.join(self.data_dir, 'list_eval_partition.csv'), delim_whitespace=True)
+        self.metadata_df = pd.read_csv(os.path.join(self.data_dir, 'list_attr_celeba.csv'))
+        self.split_df = pd.read_csv(os.path.join(self.data_dir, 'list_eval_partition.csv'))
         self.metadata_df['partition'] = self.split_df['partition']
         self.metadata_df = self.metadata_df[self.split_df['partition'] == self.split_dict[self.split]]
 
@@ -43,6 +43,9 @@ class CelebA(Dataset):
         self.n_classes = 2
         self.n_groups = 4
 
+        # Attribute for noisy label detection
+        self.noise_or_not = np.abs(self.y_array - self.confounder_array)  # 1 if minor (noisy)
+
     def __len__(self):
         return len(self.filename_array)
 
@@ -54,8 +57,8 @@ class CelebA(Dataset):
         y = self.targets[idx]
         y_group = self.targets_group[idx]
         y_spurious = self.targets_spurious[idx]
-
-        return x, (y, y_group, y_spurious), idx
+        path = self.filename_array[idx]
+        return x, (y, y_group, y_spurious), idx, path
 
 def get_transform_celeba():
     transform = transforms.Compose([

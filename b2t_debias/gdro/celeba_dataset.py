@@ -8,7 +8,7 @@ from PIL import Image
 
 class CustomCelebA(datasets.CelebA):
     def __init__(self, root, split, target_attr, bias_attr, transform, pseudo_bias=None):
-        super(CustomCelebA, self).__init__(root, split, transform=transform, download=True)
+        super(CustomCelebA, self).__init__(root, split, transform=transform, download=False)
         
         self.targets = self.attr[:, target_attr]
         if pseudo_bias is not None:
