@@ -73,7 +73,21 @@ elif args.dataset == 'imagenet-r':
     val_dataset = dataset.ImageFolder(root="data/imagenetR/data/imagenet-r-test", transform=preprocess, 
                                       target_transform=lambda label: reverse_mapping[val_dataset.classes[label]])
     class_names = [reverse_mapping[label] for label in val_dataset.classes]
-    print(class_names)
+elif args.dataset == 'imagenet':
+    preprocess = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    reverse_mapping = {v: k for k, v in map_folder_to_imagenet.items()}
+    # tested on subset of data, to test on real data: use 'data/imagenetR/data/imagenet-r/'
+    image_dir = ''
+    caption_dir = 'data/imagenet/caption/'
+    val_dataset = dataset.ImageFolder(root="data/imagenet/data/imagenet-test", transform=preprocess, 
+                                      target_transform=lambda label: reverse_mapping[val_dataset.classes[label]])
+    class_names = [reverse_mapping[label] for label in val_dataset.classes]
+
 val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=256, num_workers=4, drop_last=False)
 
 
@@ -90,7 +104,7 @@ if not os.path.exists(diff_dir):
 # extract caption
 if args.extract_caption:
     print("Start extracting captions..")
-    if args.dataset == 'imagenet-r':
+    if args.dataset == 'imagenet-r' or args.dataset == 'imagenet':
         for idx, (x, y) in tqdm(enumerate(val_dataset)):
                 image_path = val_dataset.imgs[idx][0]
                 caption = extract_caption(image_path)
@@ -117,7 +131,7 @@ if args.extract_caption:
 # correctify dataset
 result_path = result_dir + args.dataset +"_" +  args.model.split(".")[0] + ".csv"
 if not os.path.exists(result_path):
-    if args.dataset == 'imagenet-r':
+    if args.dataset == 'imagenet-r' or args.dataset == 'imagenet':
         model = models.resnet50(weights="IMAGENET1K_V1")
     else: 
         model = torch.load(model_dir + args.model, map_location=device)
@@ -126,7 +140,7 @@ if not os.path.exists(result_path):
     model.eval()
     start_time = time.time()
     print("Pretrained model \"{}\" loaded".format(args.model))
-    if args.dataset == 'imagenet-r':
+    if args.dataset == 'imagenet-r' or args.dataset == 'imagenet':
         result = {"image":[],
                 "pred":[],
                 "actual":[],              
@@ -145,7 +159,7 @@ if not os.path.exists(result_path):
 
     with torch.no_grad():
         running_corrects = 0
-        if args.dataset == 'imagenet-r':
+        if args.dataset == 'imagenet-r' or args.dataset == 'imagenet':
             start_index = 0
             for idx, (images, targets) in tqdm(enumerate(val_dataloader)):
                 images = images.to(device)
@@ -220,7 +234,7 @@ else:
     print("Classified result \"{}\" loaded".format(result_path))
 
 # extract keyword
-if args.dataset == 'imagenet-r':
+if args.dataset == 'imagenet-r' or args.dataset == 'imagenet':
     df_wrong = df[df['correct'] == 0]
     df_correct = df[df['correct'] == 1]
     for labels in class_names: 

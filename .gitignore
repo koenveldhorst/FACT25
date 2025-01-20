@@ -1,6 +1,7 @@
 data/celebA/
 data/cub/
 data/imagenetR/
+data/imagenet/
 model/*
 result/
 diff/
