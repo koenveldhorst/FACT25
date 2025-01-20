@@ -67,7 +67,6 @@ elif args.dataset == 'imagenet-r':
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     reverse_mapping = {v: k for k, v in map_folder_to_imagenet.items()}
-    # print(reverse_mapping)
     # tested on subset of data, to test on real data: use 'data/imagenetR/data/imagenet-r/'
     image_dir = ''
     caption_dir = 'data/imagenetR/caption/'
@@ -75,10 +74,6 @@ elif args.dataset == 'imagenet-r':
                                       target_transform=lambda label: reverse_mapping[val_dataset.classes[label]])
     class_names = [reverse_mapping[label] for label in val_dataset.classes]
     print(class_names)
-    # print(val_dataset.classes)
-    # print(all_folder_names)
-    # print(val_dataset[0])
-    # print(val_dataset[160])
 val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=256, num_workers=4, drop_last=False)
 
 
@@ -151,12 +146,13 @@ if not os.path.exists(result_path):
     with torch.no_grad():
         running_corrects = 0
         if args.dataset == 'imagenet-r':
+            start_index = 0
             for idx, (images, targets) in tqdm(enumerate(val_dataloader)):
                 images = images.to(device)
                 targets = targets.to(device)
                 outputs = model(images)
                 _, preds = torch.max(outputs, 1)
-                paths = [val_dataset.imgs[i][0] for i in range(len(targets))]
+                paths = [val_dataset.imgs[i][0] for i in range(start_index, start_index + len(targets))]
                 for i in range(len(preds)):
                     image = paths[i]
                     pred = preds[i]
@@ -176,6 +172,7 @@ if not os.path.exists(result_path):
                             running_corrects += 1
                     else:
                             result['correct'].append(0)
+                start_index += len(targets)
         else:
             for (images, (targets, targets_g, targets_s), index, paths) in tqdm(val_dataloader):
                 images = images.to(device)
@@ -258,24 +255,11 @@ else:
     df_correct_class_0 = df_correct[df_correct['actual'] == 0]
     df_correct_class_1 = df_correct[df_correct['actual'] == 1]
 
-# print(df_wrong)
-# print(df_correct)
-# print(df_class_0)
-# print(df_class_1)
-# print(df_wrong_class_0)
-# print(df_wrong_class_1)
-# print(df_correct_class_0)
-# print(df_correct_class_1)
-
     caption_wrong_class_0 = ' '.join(df_wrong_class_0['caption'].tolist())
     caption_wrong_class_1 = ' '.join(df_wrong_class_1['caption'].tolist())
-    # print(caption_wrong_class_0)
-    # print(caption_wrong_class_1)
 
     keywords_class_0 = extract_keyword(caption_wrong_class_0)
     keywords_class_1 = extract_keyword(caption_wrong_class_1)
-    # print(keywords_class_0)
-    # print(keywords_class_1)
 
     # calculate similarity
     print("Start calculating scores..")
