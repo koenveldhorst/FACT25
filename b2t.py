@@ -19,6 +19,8 @@ import os
 import time
 import pandas as pd
 
+from sklearn.metrics import roc_curve, roc_auc_score
+import matplotlib.pyplot as plt
 
 import argparse
 
@@ -93,6 +95,7 @@ if not os.path.exists(result_path):
 
     result = {"image":[],
             "pred":[],
+            "prob":[],
             "actual":[],
             "group":[],
             "spurious":[],                
@@ -106,10 +109,12 @@ if not os.path.exists(result_path):
             images = images.to(device)
             targets = targets.to(device)
             outputs = model(images)
+            probs = torch.nn.functional.softmax(outputs, dim=1)[:, 1] # TODO extract probabilities
             _, preds = torch.max(outputs, 1)
             for i in range(len(preds)):
                 image = paths[i]
                 pred = preds[i]
+                prob = probs[i]
                 actual = targets[i]
                 group = targets_g[i]
                 spurious = targets_s[i]
@@ -118,6 +123,7 @@ if not os.path.exists(result_path):
                     caption = f.readline()
                 result['image'].append(image)
                 result['pred'].append(pred.item())
+                result['prob'].append(prob.item())
                 result['actual'].append(actual.item())
                 result['group'].append(group.item())
                 result['spurious'].append(spurious.item())
@@ -132,6 +138,16 @@ if not os.path.exists(result_path):
         print("# of wrong examples : ", len(val_dataset) - running_corrects)
         print("# of all examples : ", len(val_dataset))
         print("Accuracy : {:.2f} %".format(running_corrects/len(val_dataset)*100))
+
+        # Compute ROC curve and AUC
+        
+
+        # # Print results
+        # print("ROC Curve Calculation Complete:")
+        # print(f"AUC (Area Under the Curve): {auc:.4f}")
+        # print("False Positive Rates (FPR):", fpr)
+        # print("True Positive Rates (TPR):", tpr)
+        # print("Thresholds:", thresholds)
 
     df = pd.DataFrame(result)
     df.to_csv(result_path)
@@ -171,6 +187,25 @@ diff_0 = print_similarity(keywords_class_0, keywords_class_1, dist_class_0, dist
 print("*"*60)
 print("Result for class :", class_names[1])
 diff_1 = print_similarity(keywords_class_1, keywords_class_0, dist_class_1, dist_class_0, df_class_1)
+
+# calculate ROC curve
+df_all_probs = df['prob']
+df_all_targets = df['actual']
+fpr, tpr, thresholds = roc_curve(df_all_targets, df_all_probs)
+auc = roc_auc_score(df_all_targets, df_all_probs)
+
+# Plot ROC curve
+plt.figure()
+plt.plot(fpr, tpr, color='blue', label='ROC curve')
+plt.plot([0, 1], [0, 1], color='gray', linestyle='--')  # Diagonal line (random classifier)
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve')
+plt.legend(loc='lower right')
+
+# Save the plot as a file
+plt.savefig('roc_curves/roc_curve.png')
+plt.close()
 
 if args.save_result:
     diff_path_0 = diff_dir + args.dataset +"_" +  args.model.split(".")[0] + "_" +  class_names[0] + ".csv"
