@@ -24,6 +24,10 @@ source activate b2t
 # srun python b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
 #srun python b2t.py --dataset celeba --model best_model_CelebA_erm.pth
 
-cd b2t_debias/
+# cd b2t_debias/
 #srun python infer_group_label.py --data_dir "../data/cub/data" --dataset waterbirds --save_path pseudo_bias/waterbirds.pt
-srun bash gdro/scripts/run_dro_waterbirds_b2t.sh "../data/cub/data" 42
+# srun bash gdro/scripts/run_dro_waterbirds_b2t.sh "../data/cub/data" 42
+
+python b2t.py --dataset imagenet-r --model resnet50.pth
+# python b2t.py --dataset imagenet --model resnet50.pth
+ 
