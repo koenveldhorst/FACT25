@@ -21,6 +21,9 @@ import pandas as pd
 
 from sklearn.metrics import roc_curve, roc_auc_score
 import matplotlib.pyplot as plt
+# from b2t_debias.gdro.resnet import ResNet
+# from b2t_debias.gdro.resnet import get_model
+# from b2t_debias.gdro.group_dro import build_model
 
 import argparse
 
@@ -88,6 +91,17 @@ if args.extract_caption:
 result_path = result_dir + args.dataset +"_" +  args.model.split(".")[0] + ".csv"
 if not os.path.exists(result_path):
     model = torch.load(model_dir + args.model)
+
+    # if type(model) is dict:
+    #     # Step 1: Load the .pth file
+    #     checkpoint = torch.load(model_dir + args.model)
+
+    #     # Step 2: Initialize your model
+    #     model = build_model()
+
+    #     # Step 3: Load the state dictionary
+    #     model.load_state_dict(checkpoint['model'])
+        
     model = model.to(device)
     model.eval()
     start_time = time.time()
@@ -138,16 +152,6 @@ if not os.path.exists(result_path):
         print("# of wrong examples : ", len(val_dataset) - running_corrects)
         print("# of all examples : ", len(val_dataset))
         print("Accuracy : {:.2f} %".format(running_corrects/len(val_dataset)*100))
-
-        # Compute ROC curve and AUC
-        
-
-        # # Print results
-        # print("ROC Curve Calculation Complete:")
-        # print(f"AUC (Area Under the Curve): {auc:.4f}")
-        # print("False Positive Rates (FPR):", fpr)
-        # print("True Positive Rates (TPR):", tpr)
-        # print("Thresholds:", thresholds)
 
     df = pd.DataFrame(result)
     df.to_csv(result_path)
@@ -204,7 +208,7 @@ plt.title('ROC Curve')
 plt.legend(loc='lower right')
 
 # Save the plot as a file
-plt.savefig('roc_curves/roc_curve.png')
+plt.savefig(f'roc_curves/{args.dataset}-{args.model}.png')
 plt.close()
 
 if args.save_result:
