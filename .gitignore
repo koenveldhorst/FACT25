@@ -1,5 +1,6 @@
 data/celebA/
 data/cub/
+data/celeba/
 data/imagenetR/
 data/imagenet/
 model/*
