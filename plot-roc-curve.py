@@ -1,8 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
-from function.calculate_similarity import calc_similarity
+from PIL import Image
+from tqdm import tqdm
+import skimage.io as io
 import pandas as pd
+import clip
+import torch
 
 def compute_roc_and_auc(similarity_scores, correct_labels):
     """
@@ -48,9 +52,47 @@ def plot_roc_curves(similarity_data, keywords, csv_file_path):
     plt.legend(loc="lower right", fontsize=10)
     plt.tight_layout()
 
-    fig_path = "plots/" + csv_file_path.split(".")[0].split("_")[0] + "_roc_plot.png"
+    fig_path = "plots/" + csv_file_path.split(".")[0].split("/")[1].split("_")[0] + "_roc_plot.png"
     plt.savefig(f"{fig_path}", dpi=300, bbox_inches="tight")
     print(f"Saved figure to {fig_path}")
+
+
+# Similarity function
+def similarity_func(image_dir, images, keywords):
+    """
+    Calculate similarity scores for a batch of images and a list of keywords.
+
+    Parameters:
+        image_dir (str): Directory containing images.
+        images (list): List of image file paths.
+        keywords (list): List of keywords to compute similarity.
+
+    Returns:
+        similarity_scores (torch.Tensor): Tensor of similarity scores, one per image.
+    """
+    # Load the model
+    images = [image_dir + image for image in images]
+    images = [Image.fromarray(io.imread(image)) for image in images]
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, preprocess = clip.load("ViT-B/32", device)
+
+    image_inputs = torch.cat([preprocess(pil_image).unsqueeze(0) for pil_image in images]).to(device)
+    text_inputs = torch.cat([clip.tokenize(f"a photo of a {c}") for c in keywords]).to(device)
+
+    # Calculate features
+    with torch.no_grad():
+        image_features = model.encode_image(image_inputs)
+        text_features = model.encode_text(text_inputs)
+
+    # Normalize features
+    image_features /= image_features.norm(dim=-1, keepdim=True)
+    text_features /= text_features.norm(dim=-1, keepdim=True)
+
+    # Compute similarity (batch of images against keywords)
+    similarity = (100.0 * image_features @ text_features.T)  # Shape: (num_images, num_keywords)
+
+    # Return per-image similarity for the first keyword (assuming one keyword for subgrouping)
+    return similarity[:, 0]  # Return similarity scores for the first keyword
 
 
 # Integration with existing setup
@@ -62,7 +104,6 @@ def calculate_and_plot_auroc(image_dir, results_csv, keywords):
         image_dir (str): Directory containing images.
         results_csv (str): Path to the CSV file with classification results.
         keywords (list): List of keywords for subgroup analysis.
-        calc_similarity_func (function): Function to calculate similarity scores.
     """
     # Load classification results
     results = pd.read_csv(results_csv)
@@ -70,7 +111,7 @@ def calculate_and_plot_auroc(image_dir, results_csv, keywords):
     # Prepare data for similarity calculation
     similarity_data = {}
 
-    for keyword in keywords:
+    for keyword in tqdm(keywords):
         # Filter images containing the current keyword
         filtered_images = results[results["caption"].str.contains(keyword, case=False, na=False)]
 
@@ -78,11 +119,12 @@ def calculate_and_plot_auroc(image_dir, results_csv, keywords):
             print(f"No images found for keyword '{keyword}'. Skipping.")
             continue
 
-        # Calculate similarity scores
-        similarity_scores = calc_similarity(image_dir, filtered_images["image"].tolist(), [keyword])
+        # Calculate similarity scores in batches
+        image_list = filtered_images["image"].tolist()
+        similarity_scores = similarity_func(image_dir, image_list, [keyword]).cpu().numpy()
 
         # Store similarity scores and correct labels
-        similarity_data[keyword] = (similarity_scores.cpu().numpy(), filtered_images["correct"].to_numpy())
+        similarity_data[keyword] = (similarity_scores, filtered_images["correct"].to_numpy())
 
     # Plot ROC curves
     plot_roc_curves(similarity_data, keywords, results_csv)
