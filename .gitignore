@@ -1,10 +1,12 @@
 data/celebA/
 data/cub/
 data/celeba/
+data/imagenet_variants/
 model/*
 result/
 diff/
 function/clipcap.pt
+test/
 __pycache__
 
 slurm_inference/*
