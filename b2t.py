@@ -133,6 +133,7 @@ result_path = result_dir + args.dataset +"_" +  args.model.split(".")[0] + ".csv
 if not os.path.exists(result_path):
     if args.dataset == 'imagenet-r' or args.dataset == 'imagenet':
         model = models.resnet50(weights="IMAGENET1K_V1")
+        # model = models.vit_b_16(weights="IMAGENET1K_V1")
     else: 
         model = torch.load(model_dir + args.model, map_location=device)
 
