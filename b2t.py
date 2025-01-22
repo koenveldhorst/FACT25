@@ -19,11 +19,10 @@ import os
 import time
 import pandas as pd
 
+from codecarbon import track_emissions
 from sklearn.metrics import roc_curve, roc_auc_score
 import matplotlib.pyplot as plt
-# from b2t_debias.gdro.resnet import ResNet
-# from b2t_debias.gdro.resnet import get_model
-# from b2t_debias.gdro.group_dro import build_model
+from b2t_debias.gdro.resnet import resnet50
 
 import argparse
 
@@ -32,6 +31,7 @@ import warnings
 from torch.serialization import SourceChangeWarning
 warnings.filterwarnings("ignore", category=SourceChangeWarning)
 
+@track_emissions(project_name="Parse arguments in b2t")
 def parse_args():
     parser = argparse.ArgumentParser()    
     parser.add_argument("--dataset", type = str, default = 'waterbird', help="dataset") #celeba, waterbird
@@ -92,15 +92,10 @@ result_path = result_dir + args.dataset +"_" +  args.model.split(".")[0] + ".csv
 if not os.path.exists(result_path):
     model = torch.load(model_dir + args.model)
 
-    # if type(model) is dict:
-    #     # Step 1: Load the .pth file
-    #     checkpoint = torch.load(model_dir + args.model)
-
-    #     # Step 2: Initialize your model
-    #     model = build_model()
-
-    #     # Step 3: Load the state dictionary
-    #     model.load_state_dict(checkpoint['model'])
+    if type(model) is dict:
+        checkpoint = torch.load(model_dir + args.model)
+        model = resnet50(pretrained=False, num_classes=2)
+        model.load_state_dict(checkpoint['model'])
         
     model = model.to(device)
     model.eval()

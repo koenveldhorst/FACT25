@@ -18,9 +18,11 @@ module load Anaconda3/2023.07-2
 module load ear
 
 # Your job starts in the directory where you call sbatch
-cd $HOME/repo/
+cd $HOME/FACT25/
 # Activate your environment
 source activate b2t
 
 # Run your code
-srun --ear-user-db=emissions --ear-verbose=1 python b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
+# srun --ear-user-db=emissions/waterbirds python b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
+
+srun --ear=off python total_energy_usage.py --logs_folder emissions --logs_file waterbirds.gcn26.time.loops.csv
