@@ -39,6 +39,8 @@ def main(args):
     total_power_usage = total_power_usage_per_second * time
     print("Total power usage:", total_power_usage, "J")
 
+    print("Total power usage:", total_power_usage_per_second * (time / 3600) / 1000, "kWh")
+
 
 if __name__ == "__main__":
     args = parse_args()
