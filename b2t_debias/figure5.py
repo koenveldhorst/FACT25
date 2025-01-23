@@ -15,8 +15,8 @@ from data.waterbirds import Waterbirds
 
 import celeba_templates
 import waterbirds_templates
-from sklearn.metrics import roc_curve, roc_auc_score
-import matplotlib.pyplot as plt
+# from sklearn.metrics import roc_curve, roc_auc_score
+# import matplotlib.pyplot as plt
 
 
 def main(args):
