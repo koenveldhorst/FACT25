@@ -93,18 +93,28 @@ class_templates = [
 
 class_keywords_all = [
     [
+        "bamboo forest",
+        "bamboo",
         "forest",
         "woods",
+        "rainforest",
+        "trees",
+        "garden",
         "tree",
-        "branch",
+        "bird of paradise",
+        "wild",
+        "pond",
+        "prey"
     ],
     [
-        "ocean",
+        "seagull flies",
         "beach",
-        "surfer",
-        "boat",
-        "dock",
+        "seagull",
         "water",
         "lake",
+        "rocks",
+        "sky",
+        "city", 
+        "dog"
     ]
 ]
