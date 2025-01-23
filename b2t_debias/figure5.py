@@ -43,7 +43,7 @@ def main(args):
         raise NotImplementedError
 
     # print('hello')
-    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=128, num_workers=4, drop_last=False)
+    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=256, num_workers=4, drop_last=False)
     temperature = 0.02  # redundant parameter
 
     # get average CLIP embedding from multiple template prompts
