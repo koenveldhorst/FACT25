@@ -31,7 +31,6 @@ import warnings
 from torch.serialization import SourceChangeWarning
 warnings.filterwarnings("ignore", category=SourceChangeWarning)
 
-@track_emissions(project_name="Parse arguments in b2t")
 def parse_args():
     parser = argparse.ArgumentParser()    
     parser.add_argument("--dataset", type = str, default = 'waterbird', help="dataset") #celeba, waterbird
@@ -63,7 +62,10 @@ elif args.dataset == 'celeba':
 
 val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=256, num_workers=4, drop_last=False)
 
-
+@track_emissions(project_name="Parse arguments in b2t")
+def tester():
+    return True
+tester()
 
 
 result_dir = 'result/'
@@ -118,7 +120,7 @@ if not os.path.exists(result_path):
             images = images.to(device)
             targets = targets.to(device)
             outputs = model(images)
-            probs = torch.nn.functional.softmax(outputs, dim=1)[:, 1] # TODO extract probabilities
+            probs = torch.nn.functional.softmax(outputs, dim=1)[:, 1]
             _, preds = torch.max(outputs, 1)
             for i in range(len(preds)):
                 image = paths[i]
