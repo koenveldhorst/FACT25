@@ -1,12 +1,15 @@
 import numpy as np
 import torchvision.transforms as transforms
+import torchvision.models as models
 from torch.utils.data import DataLoader
 import torch
+from torch import nn
 import clip
 
 # for loading dataset
 from data.celeba import CelebA, get_transform_celeba
 from data.waterbirds import Waterbirds, get_transform_cub
+from data.imagenet import ImageNetIndexer, ImageNet, ImageNetC
 
 # for various functions
 from function.extract_caption import extract_caption ## default-> cuda:0/ clip:ViT-B/32
@@ -19,8 +22,8 @@ import os
 import time
 import pandas as pd
 
-
 import argparse
+from typing import Dict
 
 # ignore SourceChangeWarning when loading model
 import warnings
@@ -31,149 +34,192 @@ def parse_args():
     parser = argparse.ArgumentParser()    
     parser.add_argument("--dataset", type = str, default = 'waterbird', help="dataset") #celeba, waterbird
     parser.add_argument("--model", type=str, default='best_model_CUB_erm.pth') #best_model_CelebA_erm.pth, best_model_CelebA_dro.pth, best_model_CUB_erm.pth, best_model_CUB_dro.pth
-    parser.add_argument("--extract_caption", default = True)
+    parser.add_argument("--extract_caption", default = True) # TODO
     parser.add_argument("--save_result", default = True)
     args = parser.parse_args()
     return args
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+def load_dataset():
+    # TODO: split in dataset and b2t function
 
-# load dataset
-args = parse_args()
+    # TODO: device
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    #device = "cpu"
 
-if args.dataset == 'waterbird':
-    preprocess = get_transform_cub()
-    class_names = ['landbird', 'waterbird']
-    # group_names = ['landbird_land', 'landbird_water', 'waterbird_land', 'waterbird_water']
-    image_dir = 'data/cub/data/waterbird_complete95_forest2water2/'
-    caption_dir = 'data/cub/caption/'
-    val_dataset = Waterbirds(data_dir='data/cub/data/waterbird_complete95_forest2water2', split='val', transform=preprocess)
-elif args.dataset == 'celeba':
-    preprocess = get_transform_celeba()
-    class_names = ['not blond', 'blond']
-    # group_names = ['not blond_female', 'not blond_male', 'blond_female', 'blond_male']
-    image_dir = 'data/celebA/data/img_align_celeba/'
-    caption_dir = 'data/celebA/caption/'
-    val_dataset = CelebA(data_dir='data/celebA/data/', split='val', transform=preprocess)
+    # load dataset
+    args = parse_args()
 
-val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=256, num_workers=4, drop_last=False)
+    match args.dataset:
+        case 'imagenet' | 'imagenet-r' | 'imagenet-c':
+            imagenet_idx = ImageNetIndexer("data/imagenet_variants/label_mapping.csv")
+            n_to_name = imagenet_idx.n_to_name
+        case _:
+            imagenet_idx = None
 
+    match args.dataset:
+        case 'waterbird':
+            n_to_name = { 0: "landbird", 1: "waterbird" }
 
+            caption_dir = 'data/cub/caption/'
+            val_dataset = Waterbirds(
+                data_dir='data/cub/data/waterbird_complete95_forest2water2',
+                split='val', transform=get_transform_cub()
+            )
+        case 'celeba':
+            n_to_name = { 0: "not blond", 1: "blond" }
+            
+            caption_dir = 'data/celebA/caption/'
+            val_dataset = CelebA(
+                data_dir='data/celebA/data/', split='val', transform=get_transform_celeba()
+            )
+        case 'imagenet':
+            val_dataset = ImageNet("data/imagenet_variants", imagenet_idx, load_img=True)
+            caption_dir = val_dataset.caption_dir
+        case "imagenet-c":
+            val_dataset = ImageNetC("data/imagenet_variants", "snow", imagenet_idx, load_img=True)
+            caption_dir = val_dataset.caption_dir
 
+    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=256, num_workers=4, drop_last=False)
 
-result_dir = 'result/'
-model_dir = 'model/'
-diff_dir = 'diff/'
-if not os.path.exists(result_dir):
-    os.makedirs(result_dir)
-if not os.path.exists(diff_dir):
-    os.makedirs(diff_dir)
+def b2t(
+    dataloader: torch.utils.data.DataLoader, n_to_name: Dict,
+    erm_model: nn.Module,
+    dataset_name: str, model_name: str, extract_caption: bool,
+    caption_dir: str, result_path="result/", model_dir="model/", diff_dir="diff/",
+    device="cpu"      
+):
+    if not os.path.exists(result_dir):
+        os.makedirs(result_dir)
+    if not os.path.exists(diff_dir):
+        os.makedirs(diff_dir)
 
-# extract caption
-if args.extract_caption:
-    print("Start extracting captions..")
-    for x, (y, y_group, y_spurious), idx, path in tqdm(val_dataset):
-        image_path = image_dir + path
-        caption = extract_caption(image_path)
+    # extract caption
+    if extract_caption:
+        print("Start extracting captions..")
         if not os.path.exists(caption_dir):
             os.makedirs(caption_dir)
-        caption_path = caption_dir + path.split("/")[-1][:-4] + ".txt"
-        with open(caption_path, 'w') as f:
-            f.write(caption)
-    print("Captions of {} images extracted".format(len(val_dataset)))
 
-# correctify dataset
-result_path = result_dir + args.dataset +"_" +  args.model.split(".")[0] + ".csv"
-if not os.path.exists(result_path):
-    model = torch.load(model_dir + args.model)
-    model = model.to(device)
-    model.eval()
-    start_time = time.time()
-    print("Pretrained model \"{}\" loaded".format(args.model))
+        for batch in tqdm(dataloader.dataset):
+            img_path = batch["path"]
 
-    result = {"image":[],
-            "pred":[],
-            "actual":[],
-            "group":[],
-            "spurious":[],                
-            "correct":[],
-            "caption":[],
-            }
+            caption = extract_caption(img_path)
+            caption_path = os.path.join(
+                caption_dir,
+                str(batch["label"]) + "_" + os.path.splitext(os.path.basename(img_path))[0] + ".txt"
+            )
 
-    with torch.no_grad():
-        running_corrects = 0
-        for (images, (targets, targets_g, targets_s), index, paths) in tqdm(val_dataloader):
-            images = images.to(device)
-            targets = targets.to(device)
-            outputs = model(images)
-            _, preds = torch.max(outputs, 1)
-            for i in range(len(preds)):
-                image = paths[i]
-                pred = preds[i]
-                actual = targets[i]
-                group = targets_g[i]
-                spurious = targets_s[i]
-                caption_path = caption_dir + image.split("/")[-1][:-4] + ".txt"
-                with open(caption_path, "r") as f:
-                    caption = f.readline()
-                result['image'].append(image)
-                result['pred'].append(pred.item())
-                result['actual'].append(actual.item())
-                result['group'].append(group.item())
-                result['spurious'].append(spurious.item())
-                result['caption'].append(caption)
-                if pred == actual:
+            with open(caption_path, 'w') as f:
+                f.write(caption)
+
+        print(f"Captions of {len(dataloader.dataset)} images extracted")
+
+    # correctify dataset
+    result_path = os.path.join(result_dir, dataset_name + "_" +  os.path.splitext(model_name)[0] + ".csv")
+
+    # TODO: should this not run every time new captions are extracted also?
+    if not os.path.exists(result_path):
+        # TODO: fix
+        match dataset_name:
+            case 'imagenet' | 'imagenet-r' | 'imagenet-c':
+                model = models.resnet50(weights="IMAGENET1K_V1")
+            case _:
+                model = torch.load(os.path.join(model_dir, model_name))
+
+        model = model.to(device)
+        model.eval()
+        start_time = time.time()
+        print("Pretrained model \"{}\" loaded".format(model_name))
+
+        result = {
+            "image": [],
+            "pred": [],
+            "actual": [],
+            "group": [],
+            "spurious": [],                
+            "correct": [],
+            "caption": [],
+        }
+
+        with torch.no_grad():
+            running_corrects = 0
+            for batch in tqdm(dataloader):
+                images = batch["img"].to(device)
+                targets = batch["label"].to(device)
+                outputs = model(images)
+                _, preds = torch.max(outputs, 1)
+
+                for i in range(len(preds)):
+                    img_path = batch["path"][i]
+                    pred = preds[i]
+                    actual = targets[i]
+
+                    caption_path = os.path.join(
+                        caption_dir,
+                        str(actual.item()) + "_" + os.path.splitext(os.path.basename(img_path))[0] + ".txt"
+                    )
+                    with open(caption_path, "r") as f:
+                        caption = f.readline()
+                    
+                    if "group_label" in batch:
+                        group = batch.get("group_label")[i]
+                        result['group'].append(group.item())
+                    if "spurious_label" in batch:
+                        spurious = batch.get("spurious_label")[i]
+                        result['spurious'].append(spurious.item())
+
+                    result['image'].append(img_path)
+                    result['pred'].append(pred.item())
+                    result['actual'].append(actual.item())
+                    
+                    result['caption'].append(caption)
+                    if pred == actual:
                         result['correct'].append(1)
                         running_corrects += 1
-                else:
+                    else:
                         result['correct'].append(0)
 
-        print("# of correct examples : ", running_corrects)
-        print("# of wrong examples : ", len(val_dataset) - running_corrects)
-        print("# of all examples : ", len(val_dataset))
-        print("Accuracy : {:.2f} %".format(running_corrects/len(val_dataset)*100))
+            print("# of correct examples : ", running_corrects)
+            print("# of wrong examples : ", len(dataloader.dataset) - running_corrects)
+            print("# of all examples : ", len(dataloader.dataset))
+            print("Accuracy : {:.2f}%".format(running_corrects/len(dataloader.dataset)*100))
 
-    df = pd.DataFrame(result)
-    df.to_csv(result_path)
-    print("Classified result stored")
-else:
-    df = pd.read_csv(result_path)
-    print("Classified result \"{}\" loaded".format(result_path))
+        df = pd.DataFrame(result)
+        df.to_csv(result_path)
+        print("Classified result stored")
+    else:
+        df = pd.read_csv(result_path)
+        print("Classified result \"{}\" loaded".format(result_path))
 
-# extract keyword
-df_wrong = df[df['correct'] == 0]
-df_correct = df[df['correct'] == 1]
-df_class_0 = df[df['actual'] == 0] # not blond, landbird
-df_class_1 = df[df['actual'] == 1] # blond, waterbird
-df_wrong_class_0 = df_wrong[df_wrong['actual'] == 0]
-df_wrong_class_1 = df_wrong[df_wrong['actual'] == 1]
-df_correct_class_0 = df_correct[df_correct['actual'] == 0]
-df_correct_class_1 = df_correct[df_correct['actual'] == 1]
+    # extract keyword
+    df_wrong = df[df['correct'] == 0]
+    df_correct = df[df['correct'] == 1]
+    
+    for label, name in n_to_name.items(): 
+        df_class = df[df['actual'] == label] 
+        df_wrong_class = df_wrong[df_wrong['actual'] == label]
+        df_correct_class = df_correct[df_correct['actual'] == label]
+        caption_wrong_class = ' '.join(df_wrong_class['caption'].tolist())
+        keywords_class = extract_keyword(caption_wrong_class)
 
-caption_wrong_class_0 = ' '.join(df_wrong_class_0['caption'].tolist())
-caption_wrong_class_1 = ' '.join(df_wrong_class_1['caption'].tolist())
+        # calculate similarity
+        print("Start calculating scores..")
+        # TODO: remove first arg from func?
+        similarity_wrong_class = calc_similarity("", df_wrong_class['image'], keywords_class)
+        similarity_correct_class = calc_similarity("", df_correct_class['image'], keywords_class)
 
-keywords_class_0 = extract_keyword(caption_wrong_class_0)
-keywords_class_1 = extract_keyword(caption_wrong_class_1)
+        dist_class = similarity_wrong_class - similarity_correct_class
+        
+        print("Result for class :", name)
+        diff_0 = print_similarity(keywords_class, keywords_class, dist_class, dist_class, df_class)
+        print("*"*60)
 
-# calculate similarity
-print("Start calculating scores..")
-similarity_wrong_class_0 = calc_similarity(image_dir, df_wrong_class_0['image'], keywords_class_0)
-similarity_correct_class_0 = calc_similarity(image_dir, df_correct_class_0['image'], keywords_class_0)
-similarity_wrong_class_1 = calc_similarity(image_dir, df_wrong_class_1['image'], keywords_class_1)
-similarity_correct_class_1 = calc_similarity(image_dir, df_correct_class_1['image'], keywords_class_1)
+        if args.save_result:
+            diff_path = os.path.join(
+                diff_dir,
+                dataset_name + "_" +  os.path.splitext(model_name)[0] + "_" +  str(name) + ".csv"
+            )
+            diff_0.to_csv(diff_path)
 
-dist_class_0 = similarity_wrong_class_0 - similarity_correct_class_0
-dist_class_1 = similarity_wrong_class_1 - similarity_correct_class_1
-
-print("Result for class :", class_names[0])
-diff_0 = print_similarity(keywords_class_0, keywords_class_1, dist_class_0, dist_class_1, df_class_0)
-print("*"*60)
-print("Result for class :", class_names[1])
-diff_1 = print_similarity(keywords_class_1, keywords_class_0, dist_class_1, dist_class_0, df_class_1)
-
-if args.save_result:
-    diff_path_0 = diff_dir + args.dataset +"_" +  args.model.split(".")[0] + "_" +  class_names[0] + ".csv"
-    diff_path_1 = diff_dir + args.dataset +"_" +  args.model.split(".")[0] + "_" +  class_names[1] + ".csv"
-    diff_0.to_csv(diff_path_0)
-    diff_1.to_csv(diff_path_1)
+if __name__ == "__main__":
+    load_dataset()
+    b2t()
