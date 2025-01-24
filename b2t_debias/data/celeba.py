@@ -18,8 +18,8 @@ class CelebA(Dataset):
         self.split = split
         self.split_dict = {'train': 0, 'val': 1, 'test': 2}
 
-        self.metadata_df = pd.read_csv(os.path.join(self.data_dir, 'list_attr_celeba.csv'), delim_whitespace=True)
-        self.split_df = pd.read_csv(os.path.join(self.data_dir, 'list_eval_partition.csv'), delim_whitespace=True)
+        self.metadata_df = pd.read_csv(os.path.join(self.data_dir, 'list_attr_celeba.csv'))
+        self.split_df = pd.read_csv(os.path.join(self.data_dir, 'list_eval_partition.csv'))
         self.metadata_df['partition'] = self.split_df['partition']
         self.metadata_df = self.metadata_df[self.split_df['partition'] == self.split_dict[self.split]]
 
