@@ -8,19 +8,16 @@
 #SBATCH --time=00:06:00
 #SBATCH --output=slurm_inference/Inference_slurm_output_%A.out
 
-"""
-FACT Instructions:
-Use the additional #SBATCH --ear lines for power usage monitoring.
-Also add 'module load ear' under the modules you load.
 
-When you run a python script, you can add an additional flag --ear-user-db=emissions/waterbirds
-to save the monitoring results to a csv file. Note that you need to make an emissions folder yourself.
+# FACT Instructions:
+# Use the additional #SBATCH --ear lines for power usage monitoring.
+# Also add 'module load ear' under the modules you load.
+# When you run a python script, you can add an additional flag --ear-user-db=emissions/waterbirds
+# to save the monitoring results to a csv file. Note that you need to make an emissions folder yourself.
+# To then analyse the csv file, you need to run total_energy_usage.py, with --ear=off to stop monitoring.
+# Note that the csv file name depends on the node it ran on, so unfortunately you cannot run the monitoring and analysis in the same job.
+# Slurm output shows power usages.
 
-To then analyse the csv file, you need to run total_energy_usage.py, with --ear=off to stop monitoring.
-Note that the csv file name depends on the node it ran on, so unfortunately you cannot run the monitoring and analysis in the same job.
-
-Slurm output shows power usages.
-"""
 
 #SBATCH --ear=on
 #SBATCH --ear-policy=monitoring
