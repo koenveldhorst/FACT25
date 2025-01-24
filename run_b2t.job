@@ -33,3 +33,7 @@ srun python figure5.py --data_dir "../data/cub/data" --dataset waterbirds --save
 # python b2t.py --dataset imagenet-r --model resnet50.pth
 # python b2t.py --dataset imagenet --model resnet50.pth
  
+#srun python infer_group_label.py --data_dir "../data/celebA/data/" --dataset celeba
+#srun bash gdro/scripts/run_dro_waterbirds_b2t.sh "../data/cub/data/waterbird_complete95_forest2water2" 42
+#srun bash gdro/scripts/run_dro_celeba_b2t.sh "../data" 52
+

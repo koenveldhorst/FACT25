@@ -48,7 +48,6 @@ def main(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(device)
 
-
     # get average CLIP embedding from multiple template prompts
     with torch.no_grad():
         zeroshot_weights = []
@@ -187,7 +186,6 @@ def main(args):
         plt.legend(loc='lower right')
         # plt.show()
         plt.savefig('roc_curves_celeba.png')
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
