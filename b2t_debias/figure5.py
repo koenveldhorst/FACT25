@@ -45,6 +45,8 @@ def main(args):
     # print('hello')
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=256, num_workers=4, drop_last=False)
     temperature = 0.02  # redundant parameter
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(device)
 
     # get average CLIP embedding from multiple template prompts
     with torch.no_grad():
@@ -54,13 +56,13 @@ def main(args):
             texts = [template.format(class_template.format(class_keyword)) for template in templates for class_template in class_templates for class_keyword in class_keywords]
             texts = clip.tokenize(texts)
 
-            class_embeddings = model.encode_text(texts)
+            class_embeddings = model.encode_text(texts.to(device))
             class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
             class_embedding = class_embeddings.mean(dim=0)
             class_embedding /= class_embedding.norm()
 
             zeroshot_weights.append(class_embedding)
-        zeroshot_weights = torch.stack(zeroshot_weights, dim=1)
+        zeroshot_weights = torch.stack(zeroshot_weights, dim=1).cuda()
 
     # run CLIP zero-shot classifier
     # preds_minor, preds, targets_minor = [], [], []
@@ -75,7 +77,7 @@ def main(args):
     with torch.no_grad():
         # TODO: what is target_g
         for (image, (target, target_g, target_s), _) in tqdm(val_dataloader):
-            image = image
+            image = image.cuda()
             image_features = model.encode_image(image)
             image_features /= image_features.norm(dim=-1, keepdim=True)
 
@@ -154,7 +156,8 @@ def main(args):
         plt.ylabel('True Positive Rate')
         plt.title('ROC Curve for Landbirds')
         plt.legend(loc='lower right')
-        plt.show()
+        # plt.show()
+        plt.savefig('roc_curves_landbirds.png')
 
         # Plot ROC curve for Waterbirds
         plt.figure()
@@ -164,7 +167,9 @@ def main(args):
         plt.ylabel('True Positive Rate')
         plt.title('ROC Curve for waterbirds')
         plt.legend(loc='lower right')
-        plt.show()
+        # plt.show()
+        plt.savefig('roc_curves_waterbirds.png')
+
     elif args.dataset == 'celeba':
         celeba_pred_tensor = (torch.cat(celeba_pred, dim=0)).flatten()
         celeba_true_tensor = (torch.cat(celeba_actual, dim=0)).flatten()
@@ -179,8 +184,8 @@ def main(args):
         plt.ylabel('True Positive Rate')
         plt.title('ROC Curve for CelebA blond')
         plt.legend(loc='lower right')
-        plt.show()
-
+        # plt.show()
+        plt.savefig('roc_curves_celeba.png')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

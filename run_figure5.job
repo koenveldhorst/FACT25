@@ -1,0 +1,37 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu
+#SBATCH --gpus=1
+#SBATCH --job-name=B2T
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=18
+#SBATCH --time=01:00:00
+#SBATCH --output=slurm_inference/Inference_slurm_output_figure5_%A.out
+
+module purge
+module load 2023
+module load Anaconda3/2023.07-2
+
+# Your job starts in the directory where you call sbatch
+cd $HOME/repo/
+# Activate your environment
+source activate b2t
+
+# Run your code
+# pipenv run python -u b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
+# srun python -u b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
+
+# srun python b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
+#srun python b2t.py --dataset celeba --model best_model_CelebA_erm.pth
+
+cd b2t_debias/
+# srun python figure5.py --data_dir "../data/cub/data" --dataset waterbirds --save_path pseudo_bias/waterbirds.pt
+srun python figure5.py --data_dir "../data" --dataset celeba --save_path pseudo_bias/waterbirds.pt
+
+
+#srun python infer_group_label.py --data_dir "../data/cub/data" --dataset waterbirds --save_path pseudo_bias/waterbirds.pt
+# srun bash gdro/scripts/run_dro_waterbirds_b2t.sh "../data/cub/data" 42
+
+# python b2t.py --dataset imagenet-r --model resnet50.pth
+# python b2t.py --dataset imagenet --model resnet50.pth
+ 
