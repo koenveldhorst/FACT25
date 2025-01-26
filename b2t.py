@@ -1,15 +1,13 @@
-import numpy as np
-import torchvision.transforms as transforms
+# TODO: update readme with updated dataset loading
+
 import torchvision.models as models
+import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import torch
 from torch import nn
-import clip
 
 # for loading dataset
-from data.celeba import CelebA, get_transform_celeba
-from data.waterbirds import Waterbirds, get_transform_cub
-from data.imagenet import ImageNetIndexer, ImageNet, ImageNetC
+from data import celeba, waterbirds, imagenet
 
 # for various functions
 from function.extract_caption import extract_caption ## default-> cuda:0/ clip:ViT-B/32
@@ -19,12 +17,11 @@ from function.print_similarity import print_similarity
 
 from tqdm import tqdm
 import os
-import time
 import pandas as pd
 from collections import defaultdict
 
 import argparse
-from typing import Dict, List
+from typing import Dict, Any
 
 # ignore SourceChangeWarning when loading model
 import warnings
@@ -49,39 +46,61 @@ def load_dataset(
     """
     match dataset_name:
         case 'imagenet' | 'imagenet-r' | 'imagenet-c':
-            imagenet_idx = ImageNetIndexer("data/imagenet_variants/label_mapping.csv")
+            transform = transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ])
+
+            imagenet_idx = imagenet.Indexer("data/imagenet_variants/label_mapping.csv")
             n_to_name = imagenet_idx.n_to_name
         case _:
+            transform = None
             imagenet_idx = None
 
     match dataset_name:
         case 'waterbird':
+            transform = transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(waterbirds.MEAN, waterbirds.STD)
+            ])                
             n_to_name = { 0: "landbird", 1: "waterbird" }
 
             caption_dir = 'data/cub/caption/'
-            dataset = Waterbirds(
-                data_dir='data/cub/data/waterbird_complete95_forest2water2',
-                split='val', transform=get_transform_cub()
+            dataset = waterbirds.Waterbirds(
+                root='data/cub/data/waterbird_complete95_forest2water2',
+                split='val',
+                transform=transform
             )
         case 'celeba':
+            transform = transforms.Compose([
+                transforms.CenterCrop(178),
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(celeba.MEAN, celeba.STD),
+            ])
             n_to_name = { 0: "not blond", 1: "blond" }
             
             caption_dir = 'data/celebA/caption/'
-            dataset = CelebA(
-                data_dir='data/celebA/data/', split='val', transform=get_transform_celeba()
+            dataset = celeba.CelebA(
+                root='data/',
+                split='val',
+                transform=transform
             )
         case 'imagenet':
-            dataset = ImageNet("data/imagenet_variants", imagenet_idx, load_img=True)
+            dataset = imagenet.ImageNet("data/imagenet_variants", imagenet_idx, transform, load_img=True)
             caption_dir = dataset.caption_dir
         case "imagenet-c":
-            dataset = ImageNetC("data/imagenet_variants", "snow", imagenet_idx, load_img=True)
+            dataset = imagenet.ImageNetC("data/imagenet_variants", "snow", imagenet_idx, transform, load_img=True)
             caption_dir = dataset.caption_dir
 
-    loader = torch.utils.data.DataLoader(dataset, batch_size=256, num_workers=4, drop_last=False)
+    loader = DataLoader(dataset, batch_size=256, num_workers=4, drop_last=False)
 
     return loader, n_to_name, caption_dir
 
-# TODO: output type should perhaps be dict, not dataframe
 def b2t(
     dataloader: torch.utils.data.DataLoader,
     n_to_name: Dict[int, str],
@@ -90,7 +109,7 @@ def b2t(
     overwrite_captions: bool,
     result_file: str,
     device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
-) -> Dict[str, pd.DataFrame]:
+) -> Dict[str, Dict[str, Any]]:
     """
     Performs bias keyword discovery on image data.
 

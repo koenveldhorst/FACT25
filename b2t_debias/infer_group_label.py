@@ -10,8 +10,7 @@ import clip
 from sklearn.metrics import classification_report
 from tqdm import tqdm
 
-from data.celeba import CelebA
-from data.waterbirds import Waterbirds
+from ..data import waterbirds, celeba
 
 import celeba_templates
 import waterbirds_templates
@@ -26,22 +25,20 @@ def main(args):
     # load dataset
     if args.dataset == 'waterbirds':
         data_dir = os.path.join(args.data_dir, 'waterbird_complete95_forest2water2')
-        train_dataset = Waterbirds(data_dir=data_dir, split='train', transform=transform)
+        train_dataset = waterbirds.Waterbirds(root=data_dir, split='train', transform=transform)
         templates = waterbirds_templates.templates
         class_templates = waterbirds_templates.class_templates
         class_keywords_all = waterbirds_templates.class_keywords_all
     elif args.dataset == 'celeba':
-        # TODO: why so inconsistent with dataset loading
-        # data_dir = os.path.join(args.data_dir, 'celeba')
         data_dir = args.data_dir
-        train_dataset = CelebA(data_dir=data_dir, split='train', transform=transform)
+        train_dataset = celeba.CelebA(root=data_dir, split='train', transform=transform)
         templates = celeba_templates.templates
         class_templates = celeba_templates.class_templates
         class_keywords_all = celeba_templates.class_keywords_all
     else:
         raise NotImplementedError
 
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=256, num_workers=4, drop_last=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=256, num_workers=4, drop_last=False)
     temperature = 0.02  # redundant parameter
 
     # get average CLIP embedding from multiple template prompts

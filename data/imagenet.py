@@ -39,7 +39,7 @@ IMAGENET_DIR = "imagenet"
 # number of corruption levels for imagenet-c
 N_CORRUPTION_SEVERITY_LVLS = 5
 
-class ImageNetIndexer:
+class Indexer:
     """
     Container of dictionaries for useful imagenet mappings between index, wordnet id and name.
     """
@@ -61,7 +61,7 @@ class ImageNetC(Dataset):
 
     def __init__(
             self, root: str, distortion_name: str,
-            indexer: ImageNetIndexer, inetc_perc=0.1, inet_perc=0.5, load_img=False,
+            indexer: Indexer, transform, inetc_perc=0.1, inet_perc=0.5, load_img=False,
             classes: Set[str] = None
         ):
         """
@@ -72,8 +72,10 @@ class ImageNetC(Dataset):
         * `classes`: Wordnet IDs to load. If `None` all classes are loaded
         """
 
+        assert os.path.exists(root), f"'{root}' does not exist yet. Please generate the dataset first."
+
         self.samples = []
-        self.transform = get_imagenet_transform()
+        self.transform = transform
         self.load_img = load_img
         self.caption_dir = os.path.join(root, f"imagenet-c_caption_{distortion_name}")
 
@@ -144,15 +146,17 @@ class ImageNetC(Dataset):
 
     
 class ImageNet(Dataset):
-    def __init__(self, root: str, indexer: ImageNetIndexer, load_img=False, classes: Set[str] = None):
+    def __init__(self, root: str, indexer: Indexer, transform, load_img=False, classes: Set[str] = None):
         """
         # Args
         * `load_img`: If `True`, images will be automatically loaded when `__getitem__` is called
         * `classes`: Wordnet IDs to load. If `None` all classes are loaded
         """
 
+        assert os.path.exists(root), f"'{root}' does not exist yet. Please generate the dataset first."
+
         self.samples = []
-        self.transform = get_imagenet_transform()
+        self.transform = transform
         self.load_img = load_img
         self.caption_dir = os.path.join(root, "imagenet_caption")
 
@@ -191,11 +195,4 @@ class ImageNet(Dataset):
             "label": label,
             "img": img
         }
-
-def get_imagenet_transform() -> transforms.Compose:
-    return transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])    
+    

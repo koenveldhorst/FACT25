@@ -76,17 +76,17 @@ def test(model, test_loader, writer, epoch, log='valid'):
     corrects = []
 
     with torch.no_grad():
-        for batch_idx, batch in enumerate(test_loader):
-            inputs, targets = batch['x'].to(device), batch['y'].to(device)
+        for batch in test_loader:
+            inputs, targets = batch["img"].to(device), batch["label"].to(device)
             y_hat = model(inputs)
-            test_loss = F.cross_entropy(y_hat, targets, reduction='none')
+            test_loss = F.cross_entropy(y_hat, targets, reduction="none")
             _, predicted = y_hat.cpu().max(1)
-            correct = predicted.eq(batch['y'])
+            correct = predicted.eq(batch["label"])
             
             test_losses.append(test_loss.cpu())
             corrects.append(correct)
-            ys.append(batch['y'])
-            bs.append(batch['a'])
+            ys.append(batch["label"])
+            bs.append(batch["spurious_label"])
             
     test_losses = torch.cat(test_losses)
     corrects = torch.cat(corrects)
@@ -135,7 +135,7 @@ def train(train_loader, model, optimizer, epoch):
 
     for batch_idx, batch in enumerate(train_loader):
         model.train()
-        inputs, targets, biases = batch['x'].to(device), batch['y'].to(device), batch['a'].to(device)
+        inputs, targets, biases = batch["img"].to(device), batch["label"].to(device), batch["spurious_label"].to(device)
 
         y_hat = model(inputs)
         cost_y = criterion(y_hat, targets)
@@ -168,6 +168,7 @@ def train(train_loader, model, optimizer, epoch):
     return train_loss/(batch_idx+1)
 
 
+# TODO: is 2nd return value ever used?
 train_loader, _, valid_loader, test_loader = prepare_data(args)
 # create model
 model = build_model()
