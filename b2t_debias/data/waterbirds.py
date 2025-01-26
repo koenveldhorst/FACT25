@@ -1,3 +1,5 @@
+# TODO: unify the duplicate datasets
+
 """
 Waterbirds Dataset
 - Reference code: https://github.com/kohpangwei/group_DRO/blob/master/data/cub_dataset.py
@@ -62,11 +64,16 @@ class Waterbirds(Dataset):
         y_group = self.targets_group[idx]
         y_spurious = self.targets_spurious[idx]
 
+        out = {
+            "img": x, "label": y,
+            "group_label": y_group, "spurious_label": y_spurious,
+            "idx": idx
+        }
+
         if self.zs_group_label:
             y_group_zs = self.preds_group_zeroshot[idx]
-            return x, (y, y_group, y_spurious, y_group_zs), idx
-
-        return x, (y, y_group, y_spurious), idx
+            out["zeroshot_group_label"] = y_group_zs
+        return out
 
 
 def get_transform_cub(train):

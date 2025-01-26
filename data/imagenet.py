@@ -31,10 +31,13 @@ import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 import torchvision.datasets as dataset
 from PIL import Image
-from typing import List, Sequence, Dict
+from typing import List, Sequence, Dict, Set
 
 IMAGENET_C_DIR = "imagenet_c"
 IMAGENET_DIR = "imagenet"
+
+# number of corruption levels for imagenet-c
+N_CORRUPTION_SEVERITY_LVLS = 5
 
 class ImageNetIndexer:
     """
@@ -57,31 +60,46 @@ class ImageNetC(Dataset):
     """
 
     def __init__(
-            self, root: str, distortion_name: str, severity_levels: Sequence[int],
-            indexer: ImageNetIndexer, inetc_perc=0.1, inet_perc=0.5
+            self, root: str, distortion_name: str,
+            indexer: ImageNetIndexer, inetc_perc=0.1, inet_perc=0.5, load_img=False,
+            classes: Set[str] = None
         ):
+        """
+        # Input
+        * `inetc_perc`: percentage of each of the 5 corruption levels of imagenet-c to load
+        * `inet_perc`: percentage of imagenet to load
+        * `load_img`: If `True`, images will be automatically loaded when `__getitem__` is called
+        * `classes`: Wordnet IDs to load. If `None` all classes are loaded
+        """
 
         self.samples = []
         self.transform = get_imagenet_transform()
-        
+        self.load_img = load_img
+        self.caption_dir = os.path.join(root, f"imagenet-c_caption_{distortion_name}")
+
         # iterate over imagenet c severity levels
-        for lvl in severity_levels:
+        for lvl in range(1, N_CORRUPTION_SEVERITY_LVLS+1):
             dir = os.path.join(root, IMAGENET_C_DIR, distortion_name, str(lvl))
 
             # iterate over classes
             for cls in os.listdir(dir):
-                cls_dir = os.path.join(dir, cls)
+                if classes is not None and cls not in classes:
+                    continue
 
+                cls_dir = os.path.join(dir, cls)
+                # ignore files
                 if not os.path.isdir(cls_dir):
                     continue
                 
-                img_cap = int(len(os.listdir(cls_dir)) * inetc_perc)
+                dirs = os.listdir(cls_dir)
+
+                # take a different section from each level to avoid repeated images
+                idx_start = int(len(dirs) * inetc_perc) * (lvl-1)
+                idx_end = int(len(dirs) * inetc_perc) * lvl
+                print(idx_end - idx_start, idx_start, idx_end)
 
                 # iterate over images
-                for i, path in enumerate(os.listdir(cls_dir), 1):
-                    if i > img_cap:
-                        break
-
+                for path in dirs[idx_start:idx_end]:                    
                     # add sample
                     self.samples.append((
                         os.path.join(cls_dir, path),
@@ -92,17 +110,23 @@ class ImageNetC(Dataset):
 
         # iterate over classes
         for cls in os.listdir(dir):
+            if classes is not None and cls not in classes:
+                continue
+        
             cls_dir = os.path.join(dir, cls)
-
+            # ignore files
             if not os.path.isdir(cls_dir):
                 continue
             
-            img_cap = int(len(os.listdir(cls_dir)) * inet_perc)
+            dirs = os.listdir(cls_dir)
+
+            # take a different section from corrupted images to avoid repeated images
+            idx_start = int(len(dirs) * inetc_perc) * N_CORRUPTION_SEVERITY_LVLS
+            idx_end = idx_start + int(len(dirs) * inet_perc)
+            print(idx_end - idx_start, idx_start, idx_end)
 
             # iterate over images
-            for i, path in enumerate(os.listdir(cls_dir), 1):
-                if i > img_cap:
-                    break
+            for path in dirs[idx_start:idx_end]:
                 self.samples.append((os.path.join(cls_dir, path), cls))
 
     def __len__(self):
@@ -110,22 +134,37 @@ class ImageNetC(Dataset):
 
     def __getitem__(self, idx):
         path, label = self.samples[idx]
+        img = self.transform(Image.open(path).convert('RGB')) if self.load_img else None
 
-        img = self.transform(Image.open(path).convert('RGB'))
-        return img, label
+        return {
+            "path": path,
+            "label": label,
+            "img": img
+        }
+
     
 class ImageNet(Dataset):
-    def __init__(self, root: str, indexer: ImageNetIndexer):
+    def __init__(self, root: str, indexer: ImageNetIndexer, load_img=False, classes: Set[str] = None):
+        """
+        # Args
+        * `load_img`: If `True`, images will be automatically loaded when `__getitem__` is called
+        * `classes`: Wordnet IDs to load. If `None` all classes are loaded
+        """
+
         self.samples = []
         self.transform = get_imagenet_transform()
-        self.indexer = indexer
+        self.load_img = load_img
+        self.caption_dir = os.path.join(root, "imagenet_caption")
 
         dir = os.path.join(root, IMAGENET_DIR)
 
         # iterate over classes
         for cls in os.listdir(dir):
+            if classes is not None and cls not in classes:
+                continue
+            
             cls_dir = os.path.join(dir, cls)
-
+            # ignore files
             if not os.path.isdir(cls_dir):
                 continue
             
@@ -136,8 +175,6 @@ class ImageNet(Dataset):
                     os.path.join(cls_dir, path),
                     indexer.id_to_n[cls]
                 ))
-
-        self.caption_dir = os.path.join(root, "caption")
         
     def get_caption_dir(self):
         return self.caption_dir
@@ -147,9 +184,13 @@ class ImageNet(Dataset):
 
     def __getitem__(self, idx):
         path, label = self.samples[idx]
+        img = self.transform(Image.open(path).convert('RGB')) if self.load_img else None
 
-        img = self.transform(Image.open(path).convert('RGB'))
-        return img, label
+        return {
+            "path": path,
+            "label": label,
+            "img": img
+        }
 
 def get_imagenet_transform() -> transforms.Compose:
     return transforms.Compose([

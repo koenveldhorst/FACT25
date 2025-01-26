@@ -48,9 +48,15 @@ def main(args):
     with torch.no_grad():
         zeroshot_weights = []
         for class_keywords in class_keywords_all:
-            texts = [template.format(class_template.format(class_keyword)) for template in templates for class_template in class_templates for class_keyword in class_keywords]
+            texts = [
+                template.format(class_template.format(class_keyword))
+                    for template in templates
+                        for class_template in class_templates
+                            for class_keyword in class_keywords
+            ]
             texts = clip.tokenize(texts).cuda()
 
+            # TODO: what is going on with all this normalization?
             class_embeddings = model.encode_text(texts)
             class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
             class_embedding = class_embeddings.mean(dim=0)
@@ -62,9 +68,11 @@ def main(args):
     # run CLIP zero-shot classifier
     preds_minor, preds, targets_minor = [], [], []
     with torch.no_grad():
-        # TODO: what is target_g
-        for (image, (target, target_g, target_s), *_) in tqdm(train_dataloader):
-            image = image.cuda()
+        for batch in tqdm(train_dataloader):
+            image = batch["img"].cuda()
+            target = batch["label"]
+            target_s = batch["spurious_label"]
+
             image_features = model.encode_image(image)
             image_features /= image_features.norm(dim=-1, keepdim=True)
 

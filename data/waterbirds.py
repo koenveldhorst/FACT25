@@ -15,7 +15,10 @@ class Waterbirds(Dataset):
     """
     Waterbirds dataset from waterbird_complete95_forest2water2 in GroupDRO paper
     """
-    def __init__(self, data_dir='data/cub/data/waterbird_complete95_forest2water2', split='train', transform=None, zs_group_label=None):
+    def __init__(
+            self, data_dir='data/cub/data/waterbird_complete95_forest2water2',
+            split='train', transform=None, zs_group_label=None
+        ):
         self.data_dir = data_dir
         self.split = split
         self.split_dict = {'train': 0, 'val': 1, 'test': 2}
@@ -53,21 +56,24 @@ class Waterbirds(Dataset):
         return len(self.filename_array)
 
     def __getitem__(self, idx):
-        img_filename = os.path.join(self.data_dir, self.filename_array[idx])
-        img = Image.open(img_filename).convert('RGB')
+        path = os.path.join(self.data_dir, self.filename_array[idx])
+        img = Image.open(path).convert('RGB')
         x = self.transform(img)
 
         y = self.targets[idx]
         y_group = self.targets_group[idx]
         y_spurious = self.targets_spurious[idx]
-        path = self.filename_array[idx]
+
+        out = {
+            "img": x, "label": y,
+            "group_label": y_group, "spurious_label": y_spurious,
+            "idx": idx, "path": path
+        }
 
         if self.zs_group_label:
             y_group_zs = self.preds_group_zeroshot[idx]
-            return x, (y, y_group, y_spurious, y_group_zs), idx
-
-        return x, (y, y_group, y_spurious), idx, path
-
+            out["zeroshot_group_label"] = y_group_zs
+        return out
 
 def get_transform_cub():
     transform = transforms.Compose([

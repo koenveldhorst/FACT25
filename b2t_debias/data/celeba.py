@@ -50,15 +50,19 @@ class CelebA(Dataset):
         return len(self.filename_array)
 
     def __getitem__(self, idx):
-        img_filename = os.path.join(self.data_dir, 'img_align_celeba', self.filename_array[idx])
-        img = Image.open(img_filename).convert('RGB')
+        path = os.path.join(self.data_dir, 'img_align_celeba', self.filename_array[idx])
+        img = Image.open(path).convert('RGB')
         x = self.transform(img)
 
         y = self.targets[idx]
         y_group = self.targets_group[idx]
         y_spurious = self.targets_spurious[idx]
-        path = self.filename_array[idx]
-        return x, (y, y_group, y_spurious), idx, path
+
+        return {
+            "img": x, "label": y,
+            "group_label": y_group, "spurious_label": y_spurious,
+            "idx": idx, "path": path
+        }
 
 def get_transform_celeba():
     transform = transforms.Compose([
@@ -70,6 +74,7 @@ def get_transform_celeba():
     return transform
 
 
+# TODO: what is this function doing here? Remove it if not used
 def load_waterbirds(root_dir, bs_train=128, bs_val=128, num_workers=8):
     """
     Default dataloader setup for CelebA
