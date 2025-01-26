@@ -42,7 +42,7 @@ def prepare_cub(args):
     )
     cub_valid = waterbirds.Waterbirds(
         root=args.data_root,
-        split='val', 
+        split='valid', 
         transform=transform_valid
     )
     cub_test = waterbirds.Waterbirds(

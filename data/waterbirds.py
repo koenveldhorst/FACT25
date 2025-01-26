@@ -15,12 +15,12 @@ class Waterbirds(Dataset):
     """
     def __init__(self, root, split, transform, pseudo_bias=None, metadata_csv_name="metadata.csv"):
         assert os.path.exists(root), f"'{root}' does not exist yet. Please generate the dataset first."
-        assert split in ["train", "val", "test"], f"'{split}' is not a valid split"
+        assert split in ["train", "valid", "test"], f"'{split}' is not a valid split"
 
         self.root = root
         self.transform = transform
         self.split = split
-        self.split_dict = {"train": 0, "val": 1, "test": 2,}
+        self.split_dict = {"train": 0, "valid": 1, "test": 2,}
 
         # read metadata
         self.metadata_df = pd.read_csv(os.path.join(self.root, metadata_csv_name))
@@ -46,9 +46,10 @@ class Waterbirds(Dataset):
 
         if self.transform is not None:
             x = self.transform(img)
-            
+        
+        # TODO: remove never used items
         return {
             "img": x, "label": self.targets[idx],
             "group_label": self.groups[idx], "spurious_label": self.biases[idx],
-            "idx": idx, "path": self.filename[idx],
+            "idx": idx, "path": path,
         }

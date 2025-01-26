@@ -8,9 +8,7 @@ from PIL import Image
 MEAN = [0.485, 0.456, 0.406]
 STD = [0.229, 0.224, 0.225]
 
-# TODO: use this as the one and true celebA dataset
 class CelebA(datasets.CelebA):
-    # TODO NOTE: removed target_attr and bias_attrb
     def __init__(self, root, split, transform, pseudo_bias=None):
         """
         Inputs:

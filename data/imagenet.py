@@ -39,6 +39,9 @@ IMAGENET_DIR = "imagenet"
 # number of corruption levels for imagenet-c
 N_CORRUPTION_SEVERITY_LVLS = 5
 
+MEAN = [0.485, 0.456, 0.406]
+STD = [0.229, 0.224, 0.225]
+
 class Indexer:
     """
     Container of dictionaries for useful imagenet mappings between index, wordnet id and name.
@@ -61,22 +64,21 @@ class ImageNetC(Dataset):
 
     def __init__(
             self, root: str, distortion_name: str,
-            indexer: Indexer, transform, inetc_perc=0.1, inet_perc=0.5, load_img=False,
+            indexer: Indexer, transform, inetc_perc=0.1, inet_perc=0.5,
             classes: Set[str] = None
         ):
         """
         # Input
         * `inetc_perc`: percentage of each of the 5 corruption levels of imagenet-c to load
         * `inet_perc`: percentage of imagenet to load
-        * `load_img`: If `True`, images will be automatically loaded when `__getitem__` is called
         * `classes`: Wordnet IDs to load. If `None` all classes are loaded
         """
 
         assert os.path.exists(root), f"'{root}' does not exist yet. Please generate the dataset first."
 
-        self.samples = []
+        self.paths = []
+        targets = []
         self.transform = transform
-        self.load_img = load_img
         self.caption_dir = os.path.join(root, f"imagenet-c_caption_{distortion_name}")
 
         # iterate over imagenet c severity levels
@@ -98,15 +100,12 @@ class ImageNetC(Dataset):
                 # take a different section from each level to avoid repeated images
                 idx_start = int(len(dirs) * inetc_perc) * (lvl-1)
                 idx_end = int(len(dirs) * inetc_perc) * lvl
-                print(idx_end - idx_start, idx_start, idx_end)
 
                 # iterate over images
                 for path in dirs[idx_start:idx_end]:                    
                     # add sample
-                    self.samples.append((
-                        os.path.join(cls_dir, path),
-                        indexer.id_to_n[cls]
-                    ))
+                    self.paths.append(os.path.join(cls_dir, path))
+                    targets.append(indexer.id_to_n[cls])
         
         dir = os.path.join(root, IMAGENET_DIR)
 
@@ -125,39 +124,41 @@ class ImageNetC(Dataset):
             # take a different section from corrupted images to avoid repeated images
             idx_start = int(len(dirs) * inetc_perc) * N_CORRUPTION_SEVERITY_LVLS
             idx_end = idx_start + int(len(dirs) * inet_perc)
-            print(idx_end - idx_start, idx_start, idx_end)
 
             # iterate over images
             for path in dirs[idx_start:idx_end]:
-                self.samples.append((os.path.join(cls_dir, path), cls))
+                # add sample
+                self.paths.append(os.path.join(cls_dir, path))
+                targets.append(indexer.id_to_n[cls])
+
+        self.targets = torch.tensor(targets).long()
 
     def __len__(self):
-        return len(self.samples)
+        return len(self.paths)
 
     def __getitem__(self, idx):
-        path, label = self.samples[idx]
-        img = self.transform(Image.open(path).convert('RGB')) if self.load_img else None
+        path = self.paths[idx]
+        img = self.transform(Image.open(path).convert('RGB'))
 
         return {
             "path": path,
-            "label": label,
+            "label": self.targets[idx],
             "img": img
         }
 
     
 class ImageNet(Dataset):
-    def __init__(self, root: str, indexer: Indexer, transform, load_img=False, classes: Set[str] = None):
+    def __init__(self, root: str, indexer: Indexer, transform, classes: Set[str] = None):
         """
         # Args
-        * `load_img`: If `True`, images will be automatically loaded when `__getitem__` is called
         * `classes`: Wordnet IDs to load. If `None` all classes are loaded
         """
 
         assert os.path.exists(root), f"'{root}' does not exist yet. Please generate the dataset first."
 
-        self.samples = []
+        self.paths = []
+        targets = []
         self.transform = transform
-        self.load_img = load_img
         self.caption_dir = os.path.join(root, "imagenet_caption")
 
         dir = os.path.join(root, IMAGENET_DIR)
@@ -175,24 +176,24 @@ class ImageNet(Dataset):
             # iterate over images
             for path in os.listdir(cls_dir):
                 # add sample
-                self.samples.append((
-                    os.path.join(cls_dir, path),
-                    indexer.id_to_n[cls]
-                ))
+                self.paths.append(os.path.join(cls_dir, path))
+                targets.append(indexer.id_to_n[cls])
+        
+        self.targets = torch.tensor(targets).long()
         
     def get_caption_dir(self):
         return self.caption_dir
     
     def __len__(self):
-        return len(self.samples)
+        return len(self.paths)
 
     def __getitem__(self, idx):
-        path, label = self.samples[idx]
-        img = self.transform(Image.open(path).convert('RGB')) if self.load_img else None
+        path = self.paths[idx]
+        img = self.transform(Image.open(path).convert('RGB'))
 
         return {
             "path": path,
-            "label": label,
+            "label": self.targets[idx],
             "img": img
         }
     

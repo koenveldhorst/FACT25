@@ -50,14 +50,15 @@ def load_dataset(
                 transforms.Resize(256),
                 transforms.CenterCrop(224),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                transforms.Normalize(imagenet.MEAN, std=imagenet.STD)
             ])
 
             imagenet_idx = imagenet.Indexer("data/imagenet_variants/label_mapping.csv")
-            n_to_name = imagenet_idx.n_to_name
+            classes = ["n01484850", "n02690373", "n02009912"] # white shark, etc.
+            #classes = ["n02219486", "n03535780", "n04317175", "n03781244"] # ant, etc.
+            n_to_name = { imagenet_idx.id_to_n[id]: imagenet_idx.id_to_name[id] for id in classes }
         case _:
-            transform = None
-            imagenet_idx = None
+            transform = classes = n_to_name = imagenet_idx = None
 
     match dataset_name:
         case 'waterbird':
@@ -72,7 +73,7 @@ def load_dataset(
             caption_dir = 'data/cub/caption/'
             dataset = waterbirds.Waterbirds(
                 root='data/cub/data/waterbird_complete95_forest2water2',
-                split='val',
+                split='valid',
                 transform=transform
             )
         case 'celeba':
@@ -84,17 +85,23 @@ def load_dataset(
             ])
             n_to_name = { 0: "not blond", 1: "blond" }
             
-            caption_dir = 'data/celebA/caption/'
+            caption_dir = 'data/celeba/caption/'
             dataset = celeba.CelebA(
-                root='data/',
-                split='val',
+                root='data/celeba/',
+                split='valid',
                 transform=transform
             )
         case 'imagenet':
-            dataset = imagenet.ImageNet("data/imagenet_variants", imagenet_idx, transform, load_img=True)
+            dataset = imagenet.ImageNet(
+                "data/imagenet_variants", imagenet_idx, transform,
+                classes=classes
+            )
             caption_dir = dataset.caption_dir
         case "imagenet-c":
-            dataset = imagenet.ImageNetC("data/imagenet_variants", "snow", imagenet_idx, transform, load_img=True)
+            dataset = imagenet.ImageNetC(
+                "data/imagenet_variants", "weather/snow", imagenet_idx, transform,
+                classes=classes
+            )
             caption_dir = dataset.caption_dir
 
     loader = DataLoader(dataset, batch_size=256, num_workers=4, drop_last=False)
@@ -142,7 +149,7 @@ def b2t(
             caption = extract_caption(img_path)
             caption_path = os.path.join(
                 caption_dir,
-                str(batch["label"]) + "_" + os.path.splitext(os.path.basename(img_path))[0] + ".txt"
+                str(batch["label"].item()) + "_" + os.path.splitext(os.path.basename(img_path))[0] + ".txt"
             )
 
             with open(caption_path, 'w') as f:
@@ -259,5 +266,4 @@ if __name__ == "__main__":
         loader, n_to_name, model, caption_dir,
         overwrite_captions=args.extract_caption,
         result_file=f"result/{args.dataset + "_" + os.path.splitext(args.model)[0] + ".csv"}",
-        device="cpu"
     )
