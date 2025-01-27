@@ -55,8 +55,8 @@ def load_dataset(
             ])
 
             imagenet_idx = imagenet.Indexer("data/imagenet_variants/label_mapping.csv")
-            classes = ["n02690373", "n02009912"] # airliner, etc.
-            #classes = ["n02219486", "n03535780", "n04317175", "n03781244"] # ant, etc.
+            #classes = ["n02690373", "n02009912"] # airliner, etc.
+            classes = ["n02219486"] #, "n03535780", "n04317175", "n03781244"] # ant, etc.
             n_to_name = { imagenet_idx.id_to_n[id]: imagenet_idx.id_to_name[id] for id in classes }
         case _:
             transform = classes = n_to_name = imagenet_idx = None
@@ -94,8 +94,8 @@ def load_dataset(
             )
         case 'imagenet':
             dataset = imagenet.ImageNet(
-                "data/imagenet_variants", imagenet_idx, transform,
-                classes=classes
+                "data/imagenet_variants_curated", imagenet_idx, transform,
+                max_per_class=500
             )
             caption_dir = dataset.caption_dir
         case "imagenet-c":
@@ -253,11 +253,16 @@ def b2t(
 if __name__ == "__main__":
     args = parse_args()
 
-    # TODO: have separate model argument?
     # load model
-    match args.dataset:
-        case 'imagenet' | 'imagenet-r' | 'imagenet-c':
+    model_name = os.path.splitext(args.model)[0]
+
+    match model_name:
+        # check for torchvision model
+        case "imagenet-resnet50":
             model = models.resnet50(weights="IMAGENET1K_V1")
+        case "imagenet-ViT":
+            model = models.vit_b_16(weights="IMAGENET1K_V1")
+        # otherwise load from model folder
         case _:
             model = torch.load(os.path.join("model/", args.model))
 
@@ -268,5 +273,6 @@ if __name__ == "__main__":
     class_keywords = b2t(
         loader, n_to_name, model, caption_dir,
         overwrite_captions=args.extract_caption,
-        result_file=f"result/{args.dataset + "_" + os.path.splitext(args.model)[0] + ".csv"}",
+        result_file=f"result/{args.dataset + "_" + model_name + ".csv"}",
+        device="cpu" # TODO: remove
     )
