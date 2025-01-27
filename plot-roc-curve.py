@@ -14,6 +14,108 @@ from torch.serialization import SourceChangeWarning
 warnings.filterwarnings("ignore", category=SourceChangeWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
+
+def similarity_func(image_dir, images, keywords):
+    """
+    Calculate similarity scores for all images and all keywords.
+
+    Parameters:
+        image_dir (str): Directory containing images.
+        images (list): List of image file paths.
+        keywords (list): List of keywords to compute similarity.
+
+    Returns:
+        similarity_scores (torch.Tensor): Tensor of similarity scores, shape (num_images, num_keywords).
+    """
+    # Load the model and process images and keywords
+    image_paths = [image_dir + image for image in images]
+    images = [Image.fromarray(io.imread(image)) for image in image_paths]
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, preprocess = clip.load("ViT-B/32", device)
+
+    image_inputs = torch.cat([preprocess(pil_image).unsqueeze(0) for pil_image in images]).to(device)
+    text_inputs = torch.cat([clip.tokenize(f"a photo of a {keyword}") for keyword in keywords]).to(device)
+
+    # Calculate features
+    with torch.no_grad():
+        image_features = model.encode_image(image_inputs)
+        text_features = model.encode_text(text_inputs)
+
+    # Normalize features
+    image_features /= image_features.norm(dim=-1, keepdim=True)
+    text_features /= text_features.norm(dim=-1, keepdim=True)
+
+    # Compute similarity (batch of images against keywords)
+    scores = (image_features @ text_features.T).cpu().numpy()
+    return scores
+
+def classification_score(image_dir, images):
+    """
+    Calculate classification scores for all images.
+
+    Parameters:
+        image_dir (str): Directory containing images.
+        images (list): List of image file paths.
+
+    Returns:
+        probabilities (list): List of classification probabilities.
+    """
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model_dir = "model/"
+
+    # Load the model
+    model = torch.load(model_dir + "best_model_Waterbirds_erm.pth", map_location=device)
+    model = model.to(device)
+    model.eval()
+
+    # Preprocess images
+    preprocess = get_transform_cub()
+    image_paths = [image_dir + image for image in images]
+
+    # Perform inference
+    probabilities = []
+    with torch.no_grad():
+        for image in tqdm(image_paths, desc="Classifying images"):
+            images = Image.open(image).convert("RGB")
+            images = preprocess(images).unsqueeze(0).to(device)
+            outputs = model(images)
+            probabilities.extend(torch.softmax(outputs, dim=1)[:, 1].cpu().numpy())
+
+    return probabilities
+
+
+def assign_to_subgroups(similarity_scores, keywords, thresholding_method="mean"):
+    """
+    Assign images to subgroups based on similarity scores and a thresholding method.
+
+    Parameters:
+        similarity_scores (np.ndarray): Array of similarity scores for all images and keywords.
+        keywords (list): List of keywords for subgroup analysis.
+        thresholding_method (str): subgroup method. Options: "mean", "median", "percentile".
+
+    Returns:
+        subgroup_labels (dict): Keys: keyword. Values: 1 = high similarity, 0 = low similarity.
+    """
+    subgroup_labels = {}
+    valid_methods = ["mean", "median", "percentile"]
+    for idx, keyword in enumerate(keywords):
+        keyword_similarity_scores = similarity_scores[:, idx]
+
+        if thresholding_method == "mean":
+            threshold = np.mean(keyword_similarity_scores)
+        elif thresholding_method == "median":
+            threshold = np.median(keyword_similarity_scores)
+        elif thresholding_method == "percentile":
+            threshold = np.percentile(keyword_similarity_scores, 75)
+        else:
+            raise ValueError(f"Invalid thresholding_method. Choose from {valid_methods}")
+
+        binary_labels = (keyword_similarity_scores > threshold).astype(int)
+        subgroup_labels[keyword] = (keyword_similarity_scores, binary_labels)
+
+    return subgroup_labels
+
+
 def compute_roc_and_auc(predicted_scores, true_labels):
     """
     Compute ROC curve and AUC for a given set of predicted scores and true labels.
@@ -32,7 +134,7 @@ def compute_roc_and_auc(predicted_scores, true_labels):
     return fpr, tpr, roc_auc
 
 
-def plot_roc_curves(subgroup_data, keywords, csv_file_path, clip_scores):
+def plot_roc_curves(subgroup_data, keywords, clip_scores, csv_file_path):
     """
     Generate and plot ROC curves for each subgroup (keyword).
 
@@ -68,137 +170,27 @@ def plot_roc_curves(subgroup_data, keywords, csv_file_path, clip_scores):
     print(f"Saved figure to {fig_path}")
 
 
-def assign_to_subgroups(similarity_scores, keywords, thresholding_method="mean"):
-    """
-    Assign images to subgroups based on similarity scores and a thresholding method.
-
-    Parameters:
-        similarity_scores (np.ndarray): Array of similarity scores for all images and keywords.
-        keywords (list): List of keywords for subgroup analysis.
-        thresholding_method (str): subgroup method. Options: "mean", "median", "percentile".
-
-    Returns:
-        subgroup_labels (dict): Keys: keyword. Values: 1 = high similarity, 0 = low similarity.
-    """
-    subgroup_labels = {}
-    valid_methods = ["mean", "median", "percentile"]
-    for idx, keyword in enumerate(keywords):
-        keyword_similarity_scores = similarity_scores[:, idx]
-
-        if thresholding_method == "mean":
-            threshold = np.mean(keyword_similarity_scores)
-        elif thresholding_method == "median":
-            threshold = np.median(keyword_similarity_scores)
-        elif thresholding_method == "percentile":
-            threshold = np.percentile(keyword_similarity_scores, 75)
-        else:
-            raise ValueError(f"Invalid thresholding_method. Choose from {valid_methods}")
-
-        binary_labels = (keyword_similarity_scores > threshold).astype(int)
-        subgroup_labels[keyword] = (keyword_similarity_scores, binary_labels)
-
-    return subgroup_labels
-
-
-def similarity_func(image_dir, images, keywords):
-    """
-    Calculate similarity scores for all images and all keywords.
-
-    Parameters:
-        image_dir (str): Directory containing images.
-        images (list): List of image file paths.
-        keywords (list): List of keywords to compute similarity.
-
-    Returns:
-        similarity_scores (torch.Tensor): Tensor of similarity scores, shape (num_images, num_keywords).
-    """
-    # Load the model
-    image_paths = [image_dir + image for image in images]
-    images = [Image.fromarray(io.imread(image)) for image in image_paths]
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, preprocess = clip.load("ViT-B/32", device)
-
-    image_inputs = torch.cat([preprocess(pil_image).unsqueeze(0) for pil_image in images]).to(device)
-    text_inputs = torch.cat([clip.tokenize(f"a photo of a {keyword}") for keyword in keywords]).to(device)
-
-    # Calculate features
-    with torch.no_grad():
-        image_features = model.encode_image(image_inputs)
-        text_features = model.encode_text(text_inputs)
-
-    # Normalize features
-    image_features /= image_features.norm(dim=-1, keepdim=True)
-    text_features /= text_features.norm(dim=-1, keepdim=True)
-
-    # Compute similarity (batch of images against keywords)
-    scores = (image_features @ text_features.T).cpu().numpy()
-    return scores
-
-def classification_score(image_dir, images):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model_dir = "model/"
-
-    # Load the model
-    model = torch.load(model_dir + "best_model_Waterbirds_erm.pth", map_location=device)
-    model = model.to(device)
-    model.eval()
-
-    # Preprocess images
-    preprocess = get_transform_cub()
-    image_paths = [image_dir + image for image in images]
-
-    # Perform inference
-    probabilities = []
-    with torch.no_grad():
-        for image in tqdm(image_paths, desc="Classifying images"):
-            images = Image.open(image).convert("RGB")
-            images = preprocess(images).unsqueeze(0).to(device)
-            outputs = model(images)
-            probabilities.extend(torch.softmax(outputs, dim=1)[:, 1].cpu().numpy())
-
-    return probabilities
-
-
-def calculate_and_plot_roc(image_dir, results_csv, keywords, clip_scores, thresholding_method="mean"):
-    """
-    Main function to calculate similarity scores, assign subgroups, and plot ROC curves.
-
-    Parameters:
-        image_dir (str): Directory containing images.
-        results_csv (str): Path to the CSV file with classification results.
-        keywords (list): List of keywords for subgroup analysis.
-        thresholding_method (str): Thresholding method for subgroup assignment.
-    """
-    # Load classification results
-    results = pd.read_csv(results_csv)
-
-    # Prepare image list where actual label is 1 (waterbird)
-    images = results.loc[results["actual"] == 1, "image"].to_list()
-
-    # Calculate similarity scores
-    similarity_scores = similarity_func(image_dir, images, keywords)
-
-    # Assign to subgroups
-    subgroup_labels = assign_to_subgroups(similarity_scores, keywords, thresholding_method)
-
-    # Prepare data for ROC calculation
-    subgroup_data = {}
-    classifier_scores = classification_score(image_dir, images)
-
-    for keyword in keywords:
-        _, binary_labels = subgroup_labels[keyword]
-        subgroup_data[keyword] = (classifier_scores, binary_labels)
-
-    # Plot ROC curves
-    plot_roc_curves(subgroup_data, keywords, results_csv, clip_scores)
-
-# Example usage
 if __name__ == "__main__":
     image_dir = "data/cub/data/waterbird_complete95_forest2water2/"
     results_csv = "result/waterbird_best_model_Waterbirds_erm.csv"
-    keywords_csv = "diff/waterbird_best_model_Waterbirds_erm_waterbird.csv"
+    b2t_csv = "diff/waterbird_best_model_Waterbirds_erm_waterbird.csv"
     keywords = ["bamboo", "forest", "woods", "species", "bird"]
-    keyword_clip_scores = pd.read_csv(keywords_csv)
-    keyword_clip_scores = keyword_clip_scores.loc[keyword_clip_scores["Keyword"].isin(keywords), "Score"].values
-    clip_scores = {keyword: score for keyword, score in zip(keywords, keyword_clip_scores)}
-    calculate_and_plot_roc(image_dir, results_csv, keywords, clip_scores, thresholding_method="mean")
+
+    # Load in the csv files
+    results = pd.read_csv(results_csv)
+    b2t_scores = pd.read_csv(b2t_csv)
+
+    # Clip scores per keyword + image subset
+    clip_scores = b2t_scores.loc[b2t_scores["Keyword"].isin(keywords), "Score"].values
+    clip_scores = {keyword: score for keyword, score in zip(keywords, clip_scores)}
+    images = results.loc[results["actual"] == 1, "image"].to_list() # Only waterbird images
+
+    # Compute scores and determine subgroups
+    similarity_scores = similarity_func(image_dir, images, keywords)
+    classifier_scores = classification_score(image_dir, images)
+    subgroup_labels = assign_to_subgroups(similarity_scores, keywords, thresholding_method="mean")
+
+    # Prepare data for plotting
+    subgroup_data = {keyword: (classifier_scores, subgroup_labels[keyword][1]) for keyword in keywords}
+
+    plot_roc_curves(subgroup_data, keywords, clip_scores, results_csv)
