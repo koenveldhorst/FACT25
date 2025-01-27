@@ -82,6 +82,7 @@ class ImageNetC(Dataset):
         targets = []
         self.transform = transform
         self.caption_dir = os.path.join(root, f"imagenet-c_caption_{distortion_name}")
+        self.classes = []
 
         # iterate over imagenet c severity levels
         for lvl in range(1, N_CORRUPTION_SEVERITY_LVLS+1):
@@ -97,6 +98,7 @@ class ImageNetC(Dataset):
                 if not os.path.isdir(cls_dir):
                     continue
                 
+                self.classes.append(cls)
                 dirs = os.listdir(cls_dir)
 
                 # take a different section from each level to avoid repeated images
@@ -121,6 +123,7 @@ class ImageNetC(Dataset):
             if not os.path.isdir(cls_dir):
                 continue
             
+            self.classes.append(cls)
             dirs = os.listdir(cls_dir)
 
             # take a different section from corrupted images to avoid repeated images
@@ -170,13 +173,14 @@ class ImageNet(Dataset):
         for cls in os.listdir(dir):
             if classes is not None and cls not in classes:
                 continue
-            self.classes.append(cls)
             
             cls_dir = os.path.join(dir, cls)
             # ignore files
             if not os.path.isdir(cls_dir):
                 continue
             
+            self.classes.append(cls)
+
             # iterate over images
             for path in os.listdir(cls_dir):
                 # add sample
@@ -218,6 +222,7 @@ def get_class_accuracies(
     loader = DataLoader(dataset, batch_size=64, num_workers=4, drop_last=False)
 
     model = models.resnet50(weights="IMAGENET1K_V1").to(device)
+    model.eval()
 
     correct = torch.zeros(len(dataset.classes))
     total = torch.zeros(len(dataset.classes))
