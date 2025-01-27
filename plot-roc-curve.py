@@ -32,6 +32,7 @@ def compute_roc_and_auc(predicted_scores, true_labels):
     roc_auc = auc(fpr, tpr)
     return fpr, tpr, roc_auc
 
+
 def plot_roc_curves(subgroup_data, keywords, csv_file_path):
     """
     Generate and plot ROC curves for each subgroup (keyword).
@@ -64,53 +65,37 @@ def plot_roc_curves(subgroup_data, keywords, csv_file_path):
     print(f"Saved figure to {fig_path}")
 
 
-def assign_to_subgroups(similarity_scores, keywords, thresholding_method="top3"):
+def assign_to_subgroups(similarity_scores, keywords, thresholding_method="mean"):
     """
     Assign images to subgroups based on similarity scores and a thresholding method.
 
     Parameters:
         similarity_scores (np.ndarray): Array of similarity scores for all images and keywords.
         keywords (list): List of keywords for subgroup analysis.
-        thresholding_method (str): Method to threshold images into subgroups. Options: "top3", "mean", "median".
+        thresholding_method (str): Method to threshold images into subgroups. Options: "mean", "median", "custom".
 
     Returns:
-        subgroup_indices (dict): Dictionary where keys are keywords and values are indices of images in that subgroup.
+        subgroup_labels (dict): Dictionary where keys are keywords and values are binary labels (1 for high similarity, 0 for low similarity).
     """
-    num_images, num_keywords = similarity_scores.shape
-    subgroup_indices = {keyword: [] for keyword in keywords}
+    subgroup_labels = {}
 
     for idx, keyword in enumerate(keywords):
         keyword_similarity_scores = similarity_scores[:, idx]
 
-        if thresholding_method == "top1":
-            # Assign an image to the subgroup if the score is the highest for that image
-            top1_indices = np.argmax(similarity_scores, axis=1)
-            in_top1 = top1_indices == idx
-            subgroup_indices[keyword] = np.where(in_top1)[0]
-        elif thresholding_method == "top3":
-            # Assign an image to the subgroup if the score is among the top-3 for that image
-            top3_indices = np.argsort(similarity_scores, axis=1)[:, -3:]
-            in_top3 = np.any(top3_indices == idx, axis=1)
-            subgroup_indices[keyword] = np.where(in_top3)[0]
-        elif thresholding_method == "mean":
-            # Assign an image to the subgroup if its score is above the mean
-            mean_threshold = np.mean(keyword_similarity_scores)
-            above_mean = keyword_similarity_scores > mean_threshold
-            subgroup_indices[keyword] = np.where(above_mean)[0]
+        if thresholding_method == "mean":
+            threshold = np.mean(keyword_similarity_scores)
         elif thresholding_method == "median":
-            # Assign an image to the subgroup if its score is above the median
-            median_threshold = np.median(keyword_similarity_scores)
-            above_median = keyword_similarity_scores > median_threshold
-            subgroup_indices[keyword] = np.where(above_median)[0]
+            threshold = np.median(keyword_similarity_scores)
         elif thresholding_method == "custom":
-            # Assign an image to the subgroup if its score is in the top 25%
-            custom_threshold = np.percentile(keyword_similarity_scores, 60)
-            above_custom = keyword_similarity_scores > custom_threshold
-            subgroup_indices[keyword] = np.where(above_custom)[0]
+            threshold = np.percentile(keyword_similarity_scores, 75)  # Top 25%
         else:
-            raise ValueError("Invalid thresholding_method. Choose from 'top1', 'top3', 'mean', 'median', 'custom'.")
+            raise ValueError("Invalid thresholding_method. Choose from 'mean', 'median', 'custom'.")
 
-    return subgroup_indices
+        binary_labels = (keyword_similarity_scores > threshold).astype(int)
+        subgroup_labels[keyword] = (keyword_similarity_scores, binary_labels)
+
+    return subgroup_labels
+
 
 def similarity_func(image_dir, images, keywords):
     """
@@ -131,7 +116,7 @@ def similarity_func(image_dir, images, keywords):
     model, preprocess = clip.load("ViT-B/32", device)
 
     image_inputs = torch.cat([preprocess(pil_image).unsqueeze(0) for pil_image in images]).to(device)
-    text_inputs = torch.cat([clip.tokenize(f"a photo of a {c}") for c in keywords]).to(device)
+    text_inputs = torch.cat([clip.tokenize(f"a photo of a {keyword}") for keyword in keywords]).to(device)
 
     # Calculate features
     with torch.no_grad():
@@ -143,7 +128,7 @@ def similarity_func(image_dir, images, keywords):
     text_features /= text_features.norm(dim=-1, keepdim=True)
 
     # Compute similarity (batch of images against keywords)
-    scores = (image_features @ text_features.T) # Shape: (num_images, num_keywords)
+    scores = (image_features @ text_features.T).cpu().numpy()
     return scores
 
 def classification_score(image_dir, images):
@@ -170,38 +155,36 @@ def classification_score(image_dir, images):
 
     return probabilities
 
-def calculate_and_plot_auroc(image_dir, results_csv, keywords, thresholding_method="mean"):
+
+def calculate_and_plot_roc(image_dir, results_csv, keywords, thresholding_method="mean"):
     """
-    Integrate AUROC calculation and plotting with the existing setup.
+    Main function to calculate similarity scores, assign subgroups, and plot ROC curves.
 
     Parameters:
         image_dir (str): Directory containing images.
         results_csv (str): Path to the CSV file with classification results.
         keywords (list): List of keywords for subgroup analysis.
+        thresholding_method (str): Thresholding method for subgroup assignment.
     """
     # Load classification results
     results = pd.read_csv(results_csv)
 
     # Prepare image list where actual label is 1 (waterbird)
-    image_list = results.loc[results["actual"] == 1, "image"].to_list()
+    images = results.loc[results["actual"] == 1, "image"].to_list()
 
-    # Calculate similarity scores for all images and all keywords
-    similarity_scores = similarity_func(image_dir, image_list, keywords).cpu().numpy()
+    # Calculate similarity scores
+    similarity_scores = similarity_func(image_dir, images, keywords)
 
-    # Assign images to subgroups based on similarity scores
-    subgroup_indices = assign_to_subgroups(similarity_scores, keywords, thresholding_method)
+    # Assign to subgroups
+    subgroup_labels = assign_to_subgroups(similarity_scores, keywords, thresholding_method)
 
     # Prepare data for ROC calculation
     subgroup_data = {}
-    for keyword, indices in subgroup_indices.items():
-        # Ensure the indices map to actual labels
-        image_paths = [image_list[i] for i in indices]
-        predicted_scores = classification_score(image_dir, image_paths)
-        true_labels = results.iloc[indices]["actual"].to_numpy()
+    classifier_scores = classification_score(image_dir, images)
 
-        # Store predicted scores and true labels
-        print(f"Keyword '{keyword}': {len(predicted_scores)} scores and {len(true_labels)} labels.")
-        subgroup_data[keyword] = (predicted_scores, true_labels)
+    for keyword in keywords:
+        _, binary_labels = subgroup_labels[keyword]
+        subgroup_data[keyword] = (classifier_scores, binary_labels)
 
     # Plot ROC curves
     plot_roc_curves(subgroup_data, keywords, results_csv)
@@ -211,4 +194,4 @@ if __name__ == "__main__":
     image_dir = "data/cub/data/waterbird_complete95_forest2water2/"
     results_csv = "result/waterbird_best_model_Waterbirds_erm.csv"
     keywords = ["bamboo", "forest", "woods", "species", "bird"]
-    calculate_and_plot_auroc(image_dir, results_csv, keywords, thresholding_method="mean")
+    calculate_and_plot_roc(image_dir, results_csv, keywords, thresholding_method="mean")
