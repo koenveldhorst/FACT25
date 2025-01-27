@@ -233,4 +233,4 @@ def get_class_accuracies(
             correct[target] += pred == target
             total[target] += 1
 
-    return { "correct": correct, "total": total, "acc": correct / total }
+    return { "correct": correct.tolist(), "total": total.tolist(), "acc": (correct / total).tolist() }
