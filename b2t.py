@@ -16,6 +16,7 @@ from function.calculate_similarity import calc_similarity
 from function.print_similarity import print_similarity
 
 from tqdm import tqdm
+import clip
 import os
 import pandas as pd
 from collections import defaultdict
@@ -225,6 +226,7 @@ def b2t(
     df_correct = df_result[df_result['correct'] == 1]
     
     class_keywords = {}
+    model, preprocess = clip.load('ViT-B/32', device)
     for label, name in n_to_name.items():         
         # false negatives & true positives
         df_incorrect_class = df_incorrect[df_incorrect['actual'] == label]
@@ -236,8 +238,8 @@ def b2t(
 
         # calculate similarity
         print("Start calculating scores..")
-        similarity_wrong_class = calc_similarity(df_incorrect_class['image'], keywords_class, device)
-        similarity_correct_class = calc_similarity(df_correct_class['image'], keywords_class, device)
+        similarity_wrong_class = calc_similarity(df_incorrect_class['image'], keywords_class, model, preprocess, device)
+        similarity_correct_class = calc_similarity(df_correct_class['image'], keywords_class, model, preprocess, device)
 
         dist_class = similarity_wrong_class - similarity_correct_class
         

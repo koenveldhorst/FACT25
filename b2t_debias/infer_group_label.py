@@ -15,7 +15,6 @@ from ..data import waterbirds, celeba
 import celeba_templates
 import waterbirds_templates
 
-
 def main(args):
     model, preprocess = clip.load('RN50', jit=False)  # RN50, RN101, RN50x4, ViT-B/32
 

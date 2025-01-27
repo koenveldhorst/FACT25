@@ -9,19 +9,18 @@ from tqdm import tqdm
 def list_chunk(lst, n):
     return [lst[i:i+n] for i in range(0, len(lst), n)]
 
-def calc_similarity(images, keywords, device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
+def calc_similarity(images, keywords, model, preprocess, device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
     # Load the model
     images = [image for image in images]
     images = [Image.fromarray(io.imread(image)) for image in images]
-    model, preprocess = clip.load('ViT-B/32', device) # TODO: really load this every time?
 
     similarity_list = []
     image_list_chunked = list_chunk(images, 2000)
 
+    text_inputs = torch.cat([clip.tokenize(f"a photo of a {c}") for c in keywords]).to(device)
     for image_list in tqdm(image_list_chunked):
         # Prepare the inputs
         image_inputs = torch.cat([preprocess(pil_image).unsqueeze(0) for pil_image in image_list]).to(device) # (1909, 3, 224, 224)
-        text_inputs = torch.cat([clip.tokenize(f"a photo of a {c}") for c in keywords]).to(device)
 
         # Calculate features
         with torch.no_grad():
