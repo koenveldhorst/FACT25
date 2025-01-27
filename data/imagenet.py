@@ -215,7 +215,7 @@ def get_class_accuracies(
 
     idx = Indexer(os.path.join(data_root, "label_mapping.csv"))
     dataset = ImageNet(data_root, idx, transform)
-    loader = DataLoader(dataset, batch_size=256, num_workers=4, drop_last=False)
+    loader = DataLoader(dataset, batch_size=64, num_workers=4, drop_last=False)
 
     model = models.resnet50(weights="IMAGENET1K_V1").to(device)
 
