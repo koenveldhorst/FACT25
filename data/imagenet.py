@@ -230,7 +230,7 @@ def get_class_accuracies(
 
         for i in range(len(preds)):
             pred, target = preds[i].item(), targets[i].item()
-            correct[pred] += pred == target
-            total[pred] += 1
+            correct[target] += pred == target
+            total[target] += 1
 
     return { "correct": correct, "total": total, "acc": correct / total }
