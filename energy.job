@@ -35,5 +35,6 @@ source activate b2t
 
 # Run your code
 # srun --ear-user-db=emissions/waterbirds python b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
+# Change emissions/waterbirds to distinguish between what experiments you measure
 
 srun --ear=off python total_energy_usage.py --logs_folder emissions --logs_file waterbirds.gcn26.time.loops.csv
