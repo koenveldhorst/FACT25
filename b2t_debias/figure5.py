@@ -65,7 +65,6 @@ def main(args):
         zeroshot_weights = torch.stack(zeroshot_weights, dim=1).cuda()
 
     # run CLIP zero-shot classifier
-    # preds_minor, preds, targets_minor = [], [], []
     landbird_pred = []
     landbird_actual = []
     waterbird_pred = []
@@ -75,7 +74,6 @@ def main(args):
 
     print('hii')
     with torch.no_grad():
-        # TODO: what is target_g
         for (image, (target, target_g, target_s), _) in tqdm(val_dataloader):
             image = image.cuda()
             image_features = model.encode_image(image)
@@ -85,10 +83,6 @@ def main(args):
 
             # get classifier predictions
             probs = logits.softmax(dim=-1).cpu()
-            # probabilities.append(probs)
-            # print(len(probs.numpy()))
-            # print(probs.numpy())
-            # actual.append(target)
             conf, pred = torch.max(probs, dim=1)
 
             if args.dataset == 'waterbirds':
@@ -107,8 +101,6 @@ def main(args):
                 landbird_actual.append(landbird_minor)
                 waterbird_pred.append(waterbird_minor_pred)
                 waterbird_actual.append(waterbird_minor)
-            # probabilities.append(new_is_minor_pred)
-            # actual.append(is_minor)
             if args.dataset == 'celeba':
                 # minor group if
                 # (target, target_s) == (1, 1): blond man
@@ -119,26 +111,7 @@ def main(args):
 
                 celeba_pred.append(celeba_minor_pred)
                 celeba_actual.append(is_minor)
-            # preds_minor.append(is_minor_pred)
-            # preds.append(pred)
-            # targets_minor.append(is_minor)
 
-    # preds_minor, preds, targets_minor = torch.cat(preds_minor), torch.cat(preds), torch.cat(targets_minor)
-
-    # print(classification_report(targets_minor, preds_minor))
-
-    # # Save pseudo labels
-    # os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
-    # torch.save(preds, args.save_path)
-    
-    # probabilities = torch.cat(probabilities, dim=0) 
-    # actual =  torch.cat(actual, dim=0)
-
-    # print(landbird_pred)
-    # print(landbird_actual)
-    # print(waterbird_pred)
-    # print(waterbird_actual)
-    
     if args.dataset == 'waterbirds':
         landbird_pred_tensor = (torch.cat(landbird_pred, dim=0)).flatten()
         landbird_true_tensor = (torch.cat(landbird_actual, dim=0)).flatten()
@@ -156,7 +129,6 @@ def main(args):
         plt.ylabel('True Positive Rate')
         plt.title('ROC Curve for Landbirds')
         plt.legend(loc='lower right')
-        # plt.show()
         plt.savefig('roc_curves_landbirds.png')
 
         # Plot ROC curve for Waterbirds
@@ -165,9 +137,8 @@ def main(args):
         plt.plot([0, 1], [0, 1], color='gray', linestyle='--')  # Diagonal line (random classifier)
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
-        plt.title('ROC Curve for waterbirds')
+        plt.title('ROC Curve for Waterbirds')
         plt.legend(loc='lower right')
-        # plt.show()
         plt.savefig('roc_curves_waterbirds.png')
 
     elif args.dataset == 'celeba':
@@ -184,7 +155,6 @@ def main(args):
         plt.ylabel('True Positive Rate')
         plt.title('ROC Curve for CelebA blond')
         plt.legend(loc='lower right')
-        # plt.show()
         plt.savefig('roc_curves_celeba.png')
 
 if __name__ == "__main__":
