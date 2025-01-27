@@ -1,14 +1,13 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
 from data.waterbirds import get_transform_cub
 from PIL import Image
 from tqdm import tqdm
+import numpy as np
+import matplotlib.pyplot as plt
 import skimage.io as io
 import pandas as pd
 import clip
 import torch
-import re
 
 import warnings
 from torch.serialization import SourceChangeWarning
@@ -33,7 +32,7 @@ def compute_roc_and_auc(predicted_scores, true_labels):
     return fpr, tpr, roc_auc
 
 
-def plot_roc_curves(subgroup_data, keywords, csv_file_path):
+def plot_roc_curves(subgroup_data, keywords, csv_file_path, clip_scores):
     """
     Generate and plot ROC curves for each subgroup (keyword).
 
@@ -41,7 +40,7 @@ def plot_roc_curves(subgroup_data, keywords, csv_file_path):
         subgroup_data (dict): Dictionary where keys are keywords and values are tuples of (predicted_scores, true_labels).
         keywords (list): List of keywords to plot ROC curves for.
     """
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(6, 5))
 
     for keyword in keywords:
         if keyword not in subgroup_data:
@@ -51,14 +50,18 @@ def plot_roc_curves(subgroup_data, keywords, csv_file_path):
         predicted_scores, true_labels = subgroup_data[keyword]
         fpr, tpr, roc_auc = compute_roc_and_auc(predicted_scores, true_labels)
 
-        plt.plot(fpr, tpr, label=f"{keyword} (AUC = {roc_auc:.2f})")
+        plt.plot(fpr, tpr, label=f"{keyword} ({clip_scores[keyword]:.2f}) = {roc_auc:.2f}", linewidth=2)
 
     plt.plot([0, 1], [0, 1], color="gray", linestyle="--")  # Diagonal line for random guessing
-    plt.xlabel("False Positive Rate", fontsize=12)
-    plt.ylabel("True Positive Rate", fontsize=12)
+    plt.xlabel("False Positive Rate", fontsize=14)
+    plt.ylabel("True Positive Rate", fontsize=14)
     plt.title("ROC Curves for Subgroups", fontsize=14)
-    plt.legend(loc="lower right", fontsize=10)
+    plt.legend(loc="upper left", fontsize=10)
     plt.tight_layout()
+
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+
 
     fig_path = "plots/" + csv_file_path.split(".")[0].split("/")[1].split("_")[0] + "_roc_plot.png"
     plt.savefig(f"{fig_path}", dpi=300, bbox_inches="tight")
@@ -72,13 +75,13 @@ def assign_to_subgroups(similarity_scores, keywords, thresholding_method="mean")
     Parameters:
         similarity_scores (np.ndarray): Array of similarity scores for all images and keywords.
         keywords (list): List of keywords for subgroup analysis.
-        thresholding_method (str): Method to threshold images into subgroups. Options: "mean", "median", "custom".
+        thresholding_method (str): subgroup method. Options: "mean", "median", "percentile".
 
     Returns:
-        subgroup_labels (dict): Dictionary where keys are keywords and values are binary labels (1 for high similarity, 0 for low similarity).
+        subgroup_labels (dict): Keys: keyword. Values: 1 = high similarity, 0 = low similarity.
     """
     subgroup_labels = {}
-
+    valid_methods = ["mean", "median", "percentile"]
     for idx, keyword in enumerate(keywords):
         keyword_similarity_scores = similarity_scores[:, idx]
 
@@ -86,10 +89,10 @@ def assign_to_subgroups(similarity_scores, keywords, thresholding_method="mean")
             threshold = np.mean(keyword_similarity_scores)
         elif thresholding_method == "median":
             threshold = np.median(keyword_similarity_scores)
-        elif thresholding_method == "custom":
-            threshold = np.percentile(keyword_similarity_scores, 75)  # Top 25%
+        elif thresholding_method == "percentile":
+            threshold = np.percentile(keyword_similarity_scores, 75)
         else:
-            raise ValueError("Invalid thresholding_method. Choose from 'mean', 'median', 'custom'.")
+            raise ValueError(f"Invalid thresholding_method. Choose from {valid_methods}")
 
         binary_labels = (keyword_similarity_scores > threshold).astype(int)
         subgroup_labels[keyword] = (keyword_similarity_scores, binary_labels)
@@ -156,7 +159,7 @@ def classification_score(image_dir, images):
     return probabilities
 
 
-def calculate_and_plot_roc(image_dir, results_csv, keywords, thresholding_method="mean"):
+def calculate_and_plot_roc(image_dir, results_csv, keywords, clip_scores, thresholding_method="mean"):
     """
     Main function to calculate similarity scores, assign subgroups, and plot ROC curves.
 
@@ -187,11 +190,15 @@ def calculate_and_plot_roc(image_dir, results_csv, keywords, thresholding_method
         subgroup_data[keyword] = (classifier_scores, binary_labels)
 
     # Plot ROC curves
-    plot_roc_curves(subgroup_data, keywords, results_csv)
+    plot_roc_curves(subgroup_data, keywords, results_csv, clip_scores)
 
 # Example usage
 if __name__ == "__main__":
     image_dir = "data/cub/data/waterbird_complete95_forest2water2/"
     results_csv = "result/waterbird_best_model_Waterbirds_erm.csv"
+    keywords_csv = "diff/waterbird_best_model_Waterbirds_erm_waterbird.csv"
     keywords = ["bamboo", "forest", "woods", "species", "bird"]
-    calculate_and_plot_roc(image_dir, results_csv, keywords, thresholding_method="mean")
+    keyword_clip_scores = pd.read_csv(keywords_csv)
+    keyword_clip_scores = keyword_clip_scores.loc[keyword_clip_scores["Keyword"].isin(keywords), "Score"].values
+    clip_scores = {keyword: score for keyword, score in zip(keywords, keyword_clip_scores)}
+    calculate_and_plot_roc(image_dir, results_csv, keywords, clip_scores, thresholding_method="mean")
