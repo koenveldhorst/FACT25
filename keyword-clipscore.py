@@ -75,7 +75,7 @@ def create_clip_plot(csv_file_path, keywords_to_display):
     plt.gca().invert_yaxis()  # Invert Y-axis for top-to-bottom sorting
     plt.tight_layout()
 
-    fig_path = "plots/" + csv_file_path.split(".")[0].split("_")[-1] + "_clip_plot.png"
+    fig_path = "plots/" + csv_file_path.split(".")[0].split("_")[-1] + "_clip_plot.pdf"
     plt.savefig(f"{fig_path}", dpi=300, bbox_inches="tight")
     print(f"Saved figure to {fig_path}")
 
