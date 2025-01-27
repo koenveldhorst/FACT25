@@ -29,8 +29,10 @@ import numpy as np
 import torch
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
+import torchvision.models as models
 import torchvision.datasets as dataset
 from PIL import Image
+from tqdm import tqdm
 from typing import List, Sequence, Dict, Set
 
 IMAGENET_C_DIR = "imagenet_c"
@@ -160,6 +162,7 @@ class ImageNet(Dataset):
         targets = []
         self.transform = transform
         self.caption_dir = os.path.join(root, "imagenet_caption")
+        self.classes = []
 
         dir = os.path.join(root, IMAGENET_DIR)
 
@@ -167,6 +170,7 @@ class ImageNet(Dataset):
         for cls in os.listdir(dir):
             if classes is not None and cls not in classes:
                 continue
+            self.classes.append(cls)
             
             cls_dir = os.path.join(dir, cls)
             # ignore files
@@ -197,3 +201,35 @@ class ImageNet(Dataset):
             "img": img
         }
     
+
+def get_class_accuracies(
+    data_root: str,
+    device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+) -> torch.Tensor:
+    transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(MEAN, STD)
+    ])
+
+    idx = Indexer(os.path.join(data_root, "label_mapping.csv"))
+    dataset = ImageNet(data_root, idx, transform)
+    loader = DataLoader(dataset, batch_size=256, num_workers=4, drop_last=False)
+
+    model = models.resnet50(weights="IMAGENET1K_V1").to(device)
+
+    correct = torch.zeros(len(dataset.classes))
+    total = torch.zeros(len(dataset.classes))
+    for batch in tqdm(loader):
+        images = batch["img"].to(device)
+        targets = batch["label"].to(device)
+
+        outputs = model(images)
+        _, preds = torch.max(outputs, 1)
+
+        for i in range(len(preds)):
+            pred, target = preds[i].item(), targets[i].item()
+            correct[pred] += pred == target
+
+    return correct / total

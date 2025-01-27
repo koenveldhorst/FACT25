@@ -50,11 +50,11 @@ def load_dataset(
                 transforms.Resize(256),
                 transforms.CenterCrop(224),
                 transforms.ToTensor(),
-                transforms.Normalize(imagenet.MEAN, std=imagenet.STD)
+                transforms.Normalize(imagenet.MEAN, imagenet.STD)
             ])
 
             imagenet_idx = imagenet.Indexer("data/imagenet_variants/label_mapping.csv")
-            classes = ["n01484850", "n02690373", "n02009912"] # white shark, etc.
+            classes = ["n02690373", "n02009912"] # airliner, etc.
             #classes = ["n02219486", "n03535780", "n04317175", "n03781244"] # ant, etc.
             n_to_name = { imagenet_idx.id_to_n[id]: imagenet_idx.id_to_name[id] for id in classes }
         case _:
@@ -251,6 +251,7 @@ def b2t(
 if __name__ == "__main__":
     args = parse_args()
 
+    # TODO: have separate model argument?
     # load model
     match args.dataset:
         case 'imagenet' | 'imagenet-r' | 'imagenet-c':
