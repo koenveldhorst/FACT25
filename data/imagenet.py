@@ -155,11 +155,12 @@ class ImageNetC(Dataset):
 class ImageNet(Dataset):
     def __init__(
             self, root: str, indexer: Indexer, transform,
-            classes: Set[str] = None, max_per_class: int = None
+            classes: Set[str] = None, start_idx=0, max_per_class: int = None
         ):
         """
         # Args
         * `classes`: Wordnet IDs to load. If `None` all classes are loaded
+        * `start_idx`: Index to start loading images at for each class
         * `max_per_class`: Maximum images per class to load
         """
 
@@ -186,7 +187,7 @@ class ImageNet(Dataset):
             self.classes.append(cls)
 
             # iterate over images
-            for i, path in enumerate(os.listdir(cls_dir)):
+            for i, path in enumerate(os.listdir(cls_dir)[start_idx:]):
                 if max_per_class is not None and i >= max_per_class:
                     break
 

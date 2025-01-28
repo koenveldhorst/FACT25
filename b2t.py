@@ -93,7 +93,7 @@ def load_dataset(
         case 'imagenet':
             dataset = imagenet.ImageNet(
                 "data/imagenet_variants_curated", imagenet_idx, transform,
-                max_per_class=500
+                max_per_class=50, classes=["n02219486"]
             )
             caption_dir = dataset.caption_dir
 
