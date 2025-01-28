@@ -255,7 +255,7 @@ def b2t(
 if __name__ == "__main__":
     args = parse_args()
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # load model
     model_name = os.path.splitext(args.model)[0]
