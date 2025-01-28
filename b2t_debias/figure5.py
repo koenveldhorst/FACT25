@@ -82,7 +82,7 @@ def main(args):
             logits = image_features @ zeroshot_weights / temperature
 
             # get classifier predictions
-            probs = (logits / temperature).softmax(dim=-1).cpu()
+            probs = logits.softmax(dim=-1).cpu()
             conf, pred = torch.max(probs, dim=1)
 
             if args.dataset == 'waterbirds':
