@@ -13,7 +13,7 @@ def list_chunk(lst, n):
 def calc_similarity(image_dir, images, keywords, extract_sim_matrix):
     # Load the model
     images = [image_dir + image for image in images]
-    list_images = images
+    # list_images = images
     images = [Image.fromarray(io.imread(image)) for image in images]
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, preprocess = clip.load('ViT-B/32', device)
@@ -54,9 +54,9 @@ def calc_similarity(image_dir, images, keywords, extract_sim_matrix):
     #     keyword_path = keyword_dir + args_dataset +"_" +  args_model.split(".")[0] + "_" +  str(model_labels) + ".csv"
     #     df.to_csv(keyword_path)
     if extract_sim_matrix: 
-        similarity = torch.cat(similarity_list).mean(dim=0)
+        # similarity = torch.cat(similarity_list).mean(dim=0)
         similarity_matrix = torch.cat(similarity_list)
-        return similarity, similarity_matrix, list_images
+        return similarity_matrix
     else: 
         similarity = torch.cat(similarity_list).mean(dim=0)
         return similarity

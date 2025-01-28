@@ -112,8 +112,8 @@ if args.dataset == 'imagenet-r' or args.dataset == 'imagenet':
 
         # calculate similarity
         print("Start calculating scores..")
-        similarity, similarity_matrix, list_images = calc_similarity(image_dir, df_wrong_class['image'], keywords_class, extract_sim_matrix=True)
-        keywords_df = keyword_per_img(similarity_matrix, list_images, keywords_class)
+        similarity_matrix = calc_similarity(image_dir, df_wrong_class['image'], keywords_class, extract_sim_matrix=True)
+        keywords_df = keyword_per_img(similarity_matrix, df_wrong_class['image'].tolist(), keywords_class)
         keyword_path = keyword_dir + args.dataset +"_" +  args.model.split(".")[0] + "_" +  str(labels) + ".csv"
         keywords_df.to_csv(keyword_path)
 
@@ -135,11 +135,11 @@ else:
 
     # calculate similarity
     print("Start calculating scores..")
-    similarity_wrong_class_0, similarity_matrix_class_0, list_images_class_0 = calc_similarity(image_dir, df_wrong_class_0['image'], keywords_class_0, extract_sim_matrix=True)
-    similarity_wrong_class_1, similarity_matrix_class_1, list_images_class_1 = calc_similarity(image_dir, df_wrong_class_1['image'], keywords_class_1, extract_sim_matrix=True)
+    similarity_matrix_class_0 = calc_similarity(image_dir, df_wrong_class_0['image'], keywords_class_0, extract_sim_matrix=True)
+    similarity_matrix_class_1 = calc_similarity(image_dir, df_wrong_class_1['image'], keywords_class_1, extract_sim_matrix=True)
 
-    keywords_df_class_0 = keyword_per_img(similarity_matrix_class_0, list_images_class_0, class_names[0])
-    keywords_df_class_1 = keyword_per_img(similarity_matrix_class_1, list_images_class_1, class_names[1])
+    keywords_df_class_0 = keyword_per_img(similarity_matrix_class_0, df_wrong_class_0['image'].tolist(), class_names[0])
+    keywords_df_class_1 = keyword_per_img(similarity_matrix_class_1, df_wrong_class_1['image'].tolist(), class_names[1])
  
     keyword_path_class_0 = keyword_dir + args.dataset +"_" +  args.model.split(".")[0] + "_" +  class_names[0] + ".csv"
     keyword_path_class_1 = keyword_dir + args.dataset +"_" +  args.model.split(".")[0] + "_" +  class_names[1] + ".csv"
