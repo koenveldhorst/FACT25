@@ -10,7 +10,7 @@ import pandas as pd
 def list_chunk(lst, n):
     return [lst[i:i+n] for i in range(0, len(lst), n)]
 
-def calc_similarity(image_dir, images, keywords, args_dataset,  args_model, model_labels, find_bias_keywords):
+def calc_similarity(image_dir, images, keywords, extract_sim_matrix):
     # Load the model
     images = [image_dir + image for image in images]
     list_images = images
@@ -41,19 +41,22 @@ def calc_similarity(image_dir, images, keywords, args_dataset,  args_model, mode
         similarity = (100.0 * image_features @ text_features.T) # (1909, 20)
         similarity_list.append(similarity)
 
-    if find_bias_keywords: 
+    # if find_bias_keywords: 
+    #     similarity_matrix = torch.cat(similarity_list)
+    #     max_value = torch.argmax(similarity_matrix, dim=1)
+    #     keyword_list = [keywords[i] for i in max_value]
+    #     dict_img_keywords = {'Images': list_images, 'Bias keywords': keyword_list} 
+    #     df = pd.DataFrame(dict_img_keywords)   
+    #     # print(df)
+    #     keyword_dir = 'keyword_extraction_csv/'
+    #     if not os.path.exists(keyword_dir):
+    #         os.makedirs(keyword_dir)
+    #     keyword_path = keyword_dir + args_dataset +"_" +  args_model.split(".")[0] + "_" +  str(model_labels) + ".csv"
+    #     df.to_csv(keyword_path)
+    if extract_sim_matrix: 
+        similarity = torch.cat(similarity_list).mean(dim=0)
         similarity_matrix = torch.cat(similarity_list)
-        max_value = torch.argmax(similarity_matrix, dim=1)
-        keyword_list = [keywords[i] for i in max_value]
-        dict_img_keywords = {'Images': list_images, 'Bias keywords': keyword_list} 
-        df = pd.DataFrame(dict_img_keywords)   
-        # print(df)
-        keyword_dir = 'keyword_extraction_csv/'
-        if not os.path.exists(keyword_dir):
-            os.makedirs(keyword_dir)
-        keyword_path = keyword_dir + args_dataset +"_" +  args_model.split(".")[0] + "_" +  str(model_labels) + ".csv"
-        df.to_csv(keyword_path)
-
-    similarity = torch.cat(similarity_list).mean(dim=0)
-
-    return similarity
+        return similarity, similarity_matrix, list_images
+    else: 
+        similarity = torch.cat(similarity_list).mean(dim=0)
+        return similarity
