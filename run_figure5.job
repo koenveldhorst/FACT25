@@ -25,8 +25,8 @@ source activate b2t
 #srun python b2t.py --dataset celeba --model best_model_CelebA_erm.pth
 
 cd b2t_debias/
-# srun python figure5.py --data_dir "../data/cub/data" --dataset waterbirds --save_path pseudo_bias/waterbirds.pt
-srun python figure5.py --data_dir "../data" --dataset celeba --save_path pseudo_bias/waterbirds.pt
+srun python figure5.py --data_dir "../data/cub/data" --dataset waterbirds --save_path pseudo_bias/waterbirds.pt
+# srun python figure5.py --data_dir "../data" --dataset celeba --save_path pseudo_bias/waterbirds.pt
 
 
 #srun python infer_group_label.py --data_dir "../data/cub/data" --dataset waterbirds --save_path pseudo_bias/waterbirds.pt
