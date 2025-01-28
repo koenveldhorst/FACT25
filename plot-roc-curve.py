@@ -1,12 +1,14 @@
 from scipy.stats import linregress
 from sklearn.metrics import roc_curve, auc
-from data.waterbirds import get_transform_cub
+from data import waterbirds, celeba, imagenet
 from PIL import Image
 from tqdm import tqdm
+import torchvision.transforms as transforms
 import numpy as np
 import matplotlib.pyplot as plt
 import skimage.io as io
 import pandas as pd
+import argparse
 import clip
 import torch
 
@@ -16,7 +18,7 @@ warnings.filterwarnings("ignore", category=SourceChangeWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
-def similarity_func(image_dir, images, keywords):
+def similarity_func(image_paths, keywords):
     """
     Calculate similarity scores for all images and all keywords.
 
@@ -29,7 +31,6 @@ def similarity_func(image_dir, images, keywords):
         similarity_scores (torch.Tensor): Tensor of similarity scores, shape (num_images, num_keywords).
     """
     # Load the model and process images and keywords
-    image_paths = [image_dir + image for image in images]
     images = [Image.fromarray(io.imread(image)) for image in image_paths]
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, preprocess = clip.load("ViT-B/32", device)
@@ -50,7 +51,8 @@ def similarity_func(image_dir, images, keywords):
     scores = (image_features @ text_features.T).cpu().numpy()
     return scores
 
-def classification_score(image_dir, images):
+
+def classification_score(image_paths, preprocess):
     """
     Calculate classification scores for all images.
 
@@ -68,10 +70,6 @@ def classification_score(image_dir, images):
     model = torch.load(model_dir + "best_model_Waterbirds_erm.pth", map_location=device)
     model = model.to(device)
     model.eval()
-
-    # Preprocess images
-    preprocess = get_transform_cub()
-    image_paths = [image_dir + image for image in images]
 
     # Perform inference
     probabilities = []
@@ -234,10 +232,54 @@ def plot_correlation(subgroup_data, keywords, clip_scores, fig_path):
     print(f"Saved figure to {fig_path}")
 
 
+def load_transform(dataset_name):
+    match dataset_name:
+        case 'imagenet' | 'imagenet-r' | 'imagenet-c':
+            transform = transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(imagenet.MEAN, imagenet.STD)
+            ])
+
+        case 'waterbird':
+            transform = transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(waterbirds.MEAN, waterbirds.STD)
+            ])
+
+        case 'celeba':
+            transform = transforms.Compose([
+                transforms.CenterCrop(178),
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(celeba.MEAN, celeba.STD),
+            ])
+
+    return transform
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Plot ROC curves for subgroups.")
+    parser.add_argument("--dataset", type=str, default="waterbird", help="Dataset to use for analysis.")
+    parser.add_argument("--model", type=str, default="best_model_Waterbirds_erm.pth", help="Model to use for classification.")
+    parser.add_argument("--class_label", type=str, default="waterbird", help="Class to analyze.")
+    args = parser.parse_args()
+
+    results_csv = f"result/{args.dataset}_{args.model.split('.')[0]}.csv"
+    b2t_csv = f"diff/{args.dataset}_{args.model.split('.')[0]}_{args.class_label}.csv"
+    transform = load_transform(args.dataset)
+
+    # TODO: class label omzetten naar index en alles wat erbij hoor
+    # TODO: model moet ook geparsed worden (niet alleen voor csv filenamen)
+
+    return results_csv, b2t_csv, transform
+
+
 if __name__ == "__main__":
-    image_dir = "data/cub/data/waterbird_complete95_forest2water2/"
-    results_csv = "result/waterbird_best_model_Waterbirds_erm.csv"
-    b2t_csv = "diff/waterbird_best_model_Waterbirds_erm_waterbird.csv"
+    results_csv, b2t_csv, transform = parse_args()
     fig_path = "plots/" + b2t_csv.split(".")[0].split("/")[1].split("_")[-1]
 
     # Load in the csv files
@@ -252,13 +294,14 @@ if __name__ == "__main__":
     images = results.loc[results["actual"] == 1, "image"].to_list() # Only waterbird images
 
     # Compute scores and determine subgroups
-    similarity_scores = similarity_func(image_dir, images, keywords)
-    classifier_scores = classification_score(image_dir, images)
+    similarity_scores = similarity_func(images, keywords)
+    classifier_scores = classification_score(images, transform)
     subgroup_labels = assign_to_subgroups(similarity_scores, keywords, thresholding_method="mean")
 
     # Prepare data for plotting
     subgroup_data = {keyword: (classifier_scores, subgroup_labels[keyword][1]) for keyword in keywords}
 
+    # TODO: randomizen
     roc_keywords = ["bamboo", "forest", "woods", "species", "bird"]
     plot_roc_curves(subgroup_data, roc_keywords, clip_scores, fig_path)
     # plot_correlation(subgroup_data, keywords, clip_scores, fig_path)
