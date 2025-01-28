@@ -220,12 +220,6 @@ if not os.path.exists(result_path):
         print("# of all examples : ", len(val_dataset))
         print("Accuracy : {:.2f} %".format(running_corrects/len(val_dataset)*100))
 
-    # print(result)
-    # print('image', len(result['image']))
-    # print('pred',len(result['pred']))
-    # print('actual',len(result['actual']))
-    # print('caption',len(result['caption']))
-    # print('correct',len(result['correct']))
     
     df = pd.DataFrame(result)
     df.to_csv(result_path)
@@ -247,8 +241,8 @@ if args.dataset == 'imagenet-r' or args.dataset == 'imagenet':
 
         # calculate similarity
         print("Start calculating scores..")
-        similarity_wrong_class = calc_similarity(image_dir, df_wrong_class['image'], keywords_class)
-        similarity_correct_class = calc_similarity(image_dir, df_correct_class['image'], keywords_class)
+        similarity_wrong_class = calc_similarity(image_dir, df_wrong_class['image'], keywords_class, find_bias_keywords=True)
+        similarity_correct_class = calc_similarity(image_dir, df_correct_class['image'], keywords_class, find_bias_keywords=False)
 
         dist_class = similarity_wrong_class - similarity_correct_class
         
@@ -278,10 +272,10 @@ else:
 
     # calculate similarity
     print("Start calculating scores..")
-    similarity_wrong_class_0 = calc_similarity(image_dir, df_wrong_class_0['image'], keywords_class_0)
-    similarity_correct_class_0 = calc_similarity(image_dir, df_correct_class_0['image'], keywords_class_0)
-    similarity_wrong_class_1 = calc_similarity(image_dir, df_wrong_class_1['image'], keywords_class_1)
-    similarity_correct_class_1 = calc_similarity(image_dir, df_correct_class_1['image'], keywords_class_1)
+    similarity_wrong_class_0 = calc_similarity(image_dir, df_wrong_class_0['image'], keywords_class_0, find_bias_keywords=True)
+    similarity_correct_class_0 = calc_similarity(image_dir, df_correct_class_0['image'], keywords_class_0, find_bias_keywords=False)
+    similarity_wrong_class_1 = calc_similarity(image_dir, df_wrong_class_1['image'], keywords_class_1, find_bias_keywords=True)
+    similarity_correct_class_1 = calc_similarity(image_dir, df_correct_class_1['image'], keywords_class_1, find_bias_keywords=False)
 
     dist_class_0 = similarity_wrong_class_0 - similarity_correct_class_0
     dist_class_1 = similarity_wrong_class_1 - similarity_correct_class_1
