@@ -93,7 +93,7 @@ def main(args):
                 is_minor = (((target == 0) & (target_s == 1)) | ((target == 1) & (target_s == 0))).long()
                 
                 landbird_minor_pred = (1-target) * probs[:, 1]
-                waterbird_minor_pred = target * probs[:, 1]
+                waterbird_minor_pred = target * probs[:, 0]
                 landbird_minor = (((target == 0) & (target_s == 1))).long()
                 waterbird_minor = (((target == 1) & (target_s == 0))).long()
 
