@@ -55,9 +55,7 @@ def load_dataset(
             ])
 
             imagenet_idx = imagenet.Indexer("data/imagenet_variants/label_mapping.csv")
-            #classes = ["n02690373", "n02009912"] # airliner, etc.
             classes = ["n02219486"] #, "n03535780", "n04317175", "n03781244"] # ant, etc.
-            n_to_name = { imagenet_idx.id_to_n[id]: imagenet_idx.id_to_name[id] for id in classes }
         case _:
             transform = classes = n_to_name = imagenet_idx = None
 
@@ -98,12 +96,16 @@ def load_dataset(
                 max_per_class=500
             )
             caption_dir = dataset.caption_dir
+
+            n_to_name = { imagenet_idx.id_to_n[id]: imagenet_idx.id_to_name[id] for id in dataset.classes }
         case "imagenet-c":
             dataset = imagenet.ImageNetC(
                 "data/imagenet_variants", "weather/snow", imagenet_idx, transform,
                 classes=classes
             )
             caption_dir = dataset.caption_dir
+
+            n_to_name = { imagenet_idx.id_to_n[id]: imagenet_idx.id_to_name[id] for id in dataset.classes }
 
     loader = DataLoader(dataset, batch_size=256, num_workers=4, drop_last=False)
 
@@ -117,7 +119,7 @@ def b2t(
     overwrite_captions: bool,
     result_file: str,
     device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
-) -> Dict[str, Dict[str, Any]]:
+) -> Dict[str, pd.DataFrame]:
     """
     Performs bias keyword discovery on image data.
 
@@ -253,6 +255,8 @@ def b2t(
 if __name__ == "__main__":
     args = parse_args()
 
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
+
     # load model
     model_name = os.path.splitext(args.model)[0]
 
@@ -264,7 +268,7 @@ if __name__ == "__main__":
             model = models.vit_b_16(weights="IMAGENET1K_V1")
         # otherwise load from model folder
         case _:
-            model = torch.load(os.path.join("model/", args.model))
+            model = torch.load(os.path.join("model/", args.model), map_location=device)
 
     # load data
     loader, n_to_name, caption_dir = load_dataset(args.dataset)
@@ -274,5 +278,11 @@ if __name__ == "__main__":
         loader, n_to_name, model, caption_dir,
         overwrite_captions=args.extract_caption,
         result_file=f"result/{args.dataset + "_" + model_name + ".csv"}",
-        device="cpu" # TODO: remove
+        device=device
     )
+
+    # store keywords
+    for class_name, df_keywords in class_keywords.items():
+        df_keywords.to_csv(
+            os.path.join("diff", args.dataset + "_" + model_name + "_" + class_name + ".csv")
+        )

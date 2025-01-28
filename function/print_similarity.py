@@ -4,15 +4,11 @@ from tabulate import tabulate
 from typing import Dict, Any
 
 def find_word(text, word):
-   result = re.findall('\\b'+word+'\\b', text, flags=re.IGNORECASE)
-   if len(result)>0:
-      return True
-   else:
-      return False
+    result = re.findall('\\b'+word+'\\b', text, flags=re.IGNORECASE)
+    return len(result) > 0
 
 
-# TODO: properly document
-def print_similarity(keywords, dists, classes) -> Dict[str, Any]:
+def print_similarity(keywords, dists, classes) -> pd.DataFrame:
     result = {
         "Keyword": keywords,
         "Score": dists.cpu().numpy(),
@@ -36,4 +32,4 @@ def print_similarity(keywords, dists, classes) -> Dict[str, Any]:
     diff = pd.DataFrame(result)
     diff = diff.sort_values(by = ["Score"], ascending = False)
     print(tabulate(diff, headers='keys', showindex=False))
-    return result
+    return diff
