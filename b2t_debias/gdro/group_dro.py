@@ -177,19 +177,8 @@ def main(args):
     # create model
     model = build_model(args)
 
-    # load latest checkpoint
-    checkpoint_epoch = 0
-    for file in os.listdir(log_dir):
-        if file[:6] == "epoch_":
-            epoch = int(file[6:-4])
-            if epoch > checkpoint_epoch:
-                checkpoint_epoch = epoch
-    
-    if checkpoint_epoch > 0:
-        model.load_state_dict(
-            torch.load(os.path.join(log_dir, f"epoch_{checkpoint_epoch}.pth"))
-        )
-        print(f"Loaded checkpoint 'epoch_{checkpoint_epoch}.pth'!")
+    num_groups = 4
+    group_weight_ema = GroupEMA(size=num_groups, step_size=0.01)
 
     if args.optimizer == 'sgd':
         optimizer = torch.optim.SGD(
@@ -201,13 +190,11 @@ def main(args):
     else:
         raise NotImplementedError
 
-    num_groups = 4
-    group_weight_ema = GroupEMA(size=num_groups, step_size=0.01)
 
     best_val_acc, best_val_avg_acc = 0, 0
     best_test_acc, best_test_avg_acc = 0, 0
     best_epoch = 0
-    for epoch in range(checkpoint_epoch, args.epochs):
+    for epoch in range(args.epochs):
         train_loss = train(
             train_loader, model, optimizer, epoch, args.epochs, args.batch_size, group_weight_ema, device
         )
