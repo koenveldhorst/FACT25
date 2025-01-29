@@ -11,6 +11,7 @@ import skimage.io as io
 import pandas as pd
 import clip
 import torch
+import os
 
 import warnings
 from torch.serialization import SourceChangeWarning
@@ -51,7 +52,7 @@ def similarity_func(image_paths, keywords):
     return scores
 
 
-def classification_score(image_paths, preprocess, class_n, model):
+def classification_score(image_paths, preprocess, class_n, model_name):
     """
     Calculate classification scores for all images.
 
@@ -64,7 +65,11 @@ def classification_score(image_paths, preprocess, class_n, model):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Load the model
-    model = torch.load("model/" + model, map_location=device)
+    if model_name == "imagenet-resnet50":
+        model = models.resnet50(weights="IMAGENET1K_V1")
+    else:
+        model = torch.load("model/" + model_name, map_location=device)
+
     model = model.to(device)
     model.eval()
 
@@ -150,7 +155,7 @@ def plot_roc_curves(subgroup_data, keywords, clip_scores, fig_path):
         predicted_scores, true_labels = subgroup_data[keyword]
         fpr, tpr, roc_auc = compute_roc_and_auc(predicted_scores, true_labels)
 
-        plt.plot(fpr, tpr, label=f"{keyword} ({clip_scores[keyword]:.2f}) = {roc_auc:.2f}", linewidth=2)
+        plt.plot(fpr, tpr, label=f"{keyword} ({clip_scores[keyword]:.2f}) = {roc_auc:.3f}", linewidth=2)
 
     plt.plot([0, 1], [0, 1], color="gray", linestyle="--")  # Diagonal line for random guessing
     plt.xlabel("False Positive Rate", fontsize=14)
@@ -229,29 +234,6 @@ def plot_correlation(subgroup_data, keywords, clip_scores, fig_path):
     print(f"Saved figure to {fig_path}")
 
 
-def sample_roc_keywords(keywords, clip_scores):
-    """
-    Sample a subset of keywords for ROC curve plotting.
-
-    Parameters:
-        keywords (list): List of keywords to sample from.
-        num_keywords (int): Number of keywords to sample.
-
-    Returns:
-        roc_keywords (list): List of sampled keywords.
-    """
-    np.random.seed(42)
-    keywords = np.array(keywords)
-    high_scores = np.random.choice(keywords[:5], 2, replace=False)
-    low_scores = np.random.choice(keywords[-5:], 2, replace=False)
-    mid_scores = np.random.choice(keywords[5:-5], 1, replace=False)
-
-    roc_keywords = np.concatenate((high_scores, mid_scores, low_scores))
-    roc_keywords = sorted(roc_keywords, key=lambda x: clip_scores[x], reverse=True)
-
-    return roc_keywords
-
-
 def load_specifications(dataset_name, class_label):
     match dataset_name:
         case 'imagenet' | 'imagenet-r' | 'imagenet-c':
@@ -259,9 +241,9 @@ def load_specifications(dataset_name, class_label):
             class_ids = ["n02071294", "n02219486", "n03535780", "n03642806", "n03781244", "n04317175"]
 
             class_n = next(
-                (imagenet_idx.name_to_n[imagenet_idx.id_to_name[class_id]]
+                (imagenet_idx.id_to_name[class_id]
                 for class_id in class_ids
-                if class_label in imagenet_idx.id_to_name[class_id].split(",")),
+                if class_label == imagenet_idx.id_to_name[class_id]),
                 None
             )
 
@@ -303,27 +285,24 @@ def load_specifications(dataset_name, class_label):
     return transform, class_n, model
 
 
-def plot_roc_figure(args):
+def plot_roc_figure(args, keywords, roc_keywords, clip_scores):
     print(f"Analyzing dataset: {args.dataset}, class: {args.class_label}")
     transform, class_n, model = load_specifications(args.dataset, args.class_label)
     results_csv = f"result/{args.dataset}_{model.split('.')[0]}.csv"
-    b2t_csv = f"diff/{args.dataset}_{model.split('.')[0]}_{args.class_label}.csv"
-    fig_path = "plotting/plots/" + args.dataset + "_" + args.class_label
 
-    # Load in the csv files
+    fig_dir = f"plotting/plots/{args.dataset}"
+    os.makedirs(fig_dir, exist_ok=True)
+    fig_path = f"{fig_dir}/{args.class_label}"
+
+    # Load in the csv file
     results = pd.read_csv(results_csv)
-    b2t_scores = pd.read_csv(b2t_csv)
 
-    # Clip scores per keyword + image subset
-    keywords = b2t_scores.groupby("Keyword")["Score"].mean()
-    keywords = keywords.sort_values(ascending=False).index.tolist()
-    clip_scores = b2t_scores.loc[b2t_scores["Keyword"].isin(keywords), "Score"].values
-    clip_scores = {keyword: score for keyword, score in zip(keywords, clip_scores)}
-    images = results.loc[results["actual"] == class_n, "image"].to_list()
-    print(f"Completed loading {len(images)} images")
+    # image subset
+    image_paths = results.loc[results["actual"] == class_n, "image"].to_list()
+    print(f"Completed loading {len(image_paths)} images")
 
-    # TODO: temp
-    images = ["data/cub/data/waterbird_complete95_forest2water2/" + image for image in images]
+    # TODO: TEMP
+    images = ["data/cub/data/waterbird_complete95_forest2water2/" + image for image in image_paths]
 
     # Compute scores and determine subgroups
     similarity_scores = similarity_func(images, keywords)
@@ -333,6 +312,5 @@ def plot_roc_figure(args):
     # Prepare data for plotting
     subgroup_data = {keyword: (classifier_scores, subgroup_labels[keyword][1]) for keyword in keywords}
 
-    roc_keywords = sample_roc_keywords(keywords, clip_scores)
     plot_roc_curves(subgroup_data, roc_keywords, clip_scores, fig_path)
     plot_correlation(subgroup_data, keywords, clip_scores, fig_path)
