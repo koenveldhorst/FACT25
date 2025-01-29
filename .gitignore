@@ -12,6 +12,7 @@ function/clipcap.pt
 test/
 __pycache__
 
+slurm_plotting/*
 slurm_inference/*
 slurm*
 
