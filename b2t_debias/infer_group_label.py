@@ -10,10 +10,10 @@ import clip
 from sklearn.metrics import classification_report
 from tqdm import tqdm
 
-from ..data import waterbirds, celeba
+from data import waterbirds, celeba
 
-import celeba_templates
-import waterbirds_templates
+from b2t_debias import celeba_templates
+from b2t_debias import waterbirds_templates
 
 def main(args):
     model, preprocess = clip.load('RN50', jit=False)  # RN50, RN101, RN50x4, ViT-B/32
@@ -101,14 +101,3 @@ def main(args):
     # Save pseudo labels
     os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
     torch.save(preds, args.save_path)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--dataset', default='celeba', choices=['celeba', 'waterbirds'])
-    parser.add_argument('--data_dir', default='/data')
-    parser.add_argument('--save_path', default='./pseudo_bias/celeba.pt')
-
-    args = parser.parse_args()
-    main(args)

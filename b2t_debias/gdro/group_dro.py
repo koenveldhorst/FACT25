@@ -14,21 +14,13 @@ import torch.utils.data
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from resnet import get_model
-from data_loader import prepare_data
-from arguments import get_arguments
+from b2t_debias.gdro.resnet import get_model
+from b2t_debias.gdro.data_loader import prepare_data
+from b2t_debias.gdro.arguments import get_arguments
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-args = get_arguments()
-use_cuda = True
-torch.manual_seed(args.seed)
-device = torch.device("cuda" if use_cuda else "cpu")
-
-print(args)
-
-
-def build_model():
+def build_model(args):
     model = get_model(args)
         
     if torch.cuda.is_available():
@@ -67,7 +59,7 @@ class GroupEMA:
         return weighted_loss
 
 
-def test(model, test_loader, writer, epoch, log='valid'):
+def test(model, test_loader, writer, epoch, device, log='valid'):
     model.eval()
     
     ys = []
@@ -126,7 +118,10 @@ def test(model, test_loader, writer, epoch, log='valid'):
     return worst_accuracy, accuracy
 
 
-def train(train_loader, model, optimizer, epoch):
+def train(
+        train_loader, model, optimizer, epoch, n_epochs, batch_size,
+        group_weight_ema, device
+    ):
     print('\nEpoch: %d' % epoch)
     
     train_loss = 0
@@ -161,45 +156,51 @@ def train(train_loader, model, optimizer, epoch):
                   'Iters: [%d/%d]\t'
                   'Loss: %.4f\t'
                   'Prec@1 %.2f\t' % (
-                      (epoch + 1), args.epochs, batch_idx + 1, len(train_loader.dataset)/args.batch_size, (train_loss / (batch_idx + 1)),
+                      (epoch + 1), n_epochs, batch_idx + 1, len(train_loader.dataset)/batch_size, (train_loss / (batch_idx + 1)),
                       prec_train)
                   )
                 
     return train_loss/(batch_idx+1)
 
-
-# TODO: is 2nd return value ever used?
-train_loader, _, valid_loader, test_loader = prepare_data(args)
-# create model
-model = build_model()
-
-if args.optimizer == 'sgd':
-    optimizer = torch.optim.SGD(model.parameters(), args.lr,
-                                momentum=args.momentum, weight_decay=args.weight_decay)
-elif args.optimizer == 'adam':
-    optimizer = torch.optim.Adam(model.parameters(), args.lr)
-else:
-    raise NotImplementedError
-
-num_groups = 4
-group_weight_ema = GroupEMA(size=num_groups, step_size=0.01)
-
-log_dir = os.path.join('results', args.dataset, args.name)
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
+def main(args):
+    torch.manual_seed(args.seed)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-writer = SummaryWriter(log_dir)
+    # TODO: is 2nd return value ever used?
+    train_loader, _, valid_loader, test_loader = prepare_data(args)
+    # create model
+    model = build_model(args)
 
-def main():
+    if args.optimizer == 'sgd':
+        optimizer = torch.optim.SGD(
+            model.parameters(), args.lr,
+            momentum=args.momentum, weight_decay=args.weight_decay
+        )
+    elif args.optimizer == 'adam':
+        optimizer = torch.optim.Adam(model.parameters(), args.lr)
+    else:
+        raise NotImplementedError
+
+    num_groups = 4
+    group_weight_ema = GroupEMA(size=num_groups, step_size=0.01)
+
+    log_dir = os.path.join('results', args.dataset, args.name)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+        
+    writer = SummaryWriter(log_dir)
+
     best_val_acc, best_val_avg_acc = 0, 0
     best_test_acc, best_test_avg_acc = 0, 0
     best_epoch = 0
     for epoch in range(args.epochs):
-        train_loss = train(train_loader, model, optimizer, epoch)
+        train_loss = train(
+            train_loader, model, optimizer, epoch, args.epochs, args.batch_size, group_weight_ema, device
+        )
         writer.add_scalar(f'train/train_loss', train_loss, epoch)
 
-        valid_acc, valid_avg_acc = test(model, valid_loader, writer, epoch, 'valid')
-        test_acc, test_avg_acc = test(model, test_loader, writer, epoch, 'test')
+        valid_acc, valid_avg_acc = test(model, valid_loader, writer, epoch, device, 'valid')
+        test_acc, test_avg_acc = test(model, test_loader, writer, epoch, device, 'test')
         
         if valid_acc >= best_val_acc:
             best_val_acc, best_val_avg_acc = valid_acc, valid_avg_acc
@@ -212,7 +213,3 @@ def main():
     print(f'Best average accuracy (val) at epoch {best_epoch}: {best_val_avg_acc}')
     print(f'Best worst group accuracy (test) at epoch {best_epoch}: {best_test_acc}')
     print(f'Best average accuracy (test) at epoch {best_epoch}: {best_test_avg_acc}')
-
-
-if __name__ == '__main__':
-    main()

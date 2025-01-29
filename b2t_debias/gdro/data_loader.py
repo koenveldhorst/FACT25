@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, DataLoader, Subset, WeightedRandomSampler,
 from torchvision import transforms
 from PIL import Image
 
-from ...data import waterbirds, celeba
+from data import waterbirds, celeba
 
 def prepare_data(args):
     if args.dataset == 'celeba':

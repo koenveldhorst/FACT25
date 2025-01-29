@@ -152,7 +152,7 @@ def b2t(
             caption = extract_caption(img_path)
             caption_path = os.path.join(
                 caption_dir,
-                str(batch["label"].item()) + "_" + os.path.splitext(os.path.basename(img_path))[0] + ".txt"
+                f"{str(batch["label"].item())}_{os.path.splitext(os.path.basename(img_path))[0]}.txt"
             )
 
             with open(caption_path, 'w') as f:
@@ -186,7 +186,7 @@ def b2t(
 
                     caption_path = os.path.join(
                         caption_dir,
-                        str(actual.item()) + "_" + os.path.splitext(os.path.basename(img_path))[0] + ".txt"
+                        f"{str(actual.item())}_{os.path.splitext(os.path.basename(img_path))[0]}.txt"
                     )
                     with open(caption_path, "r") as f:
                         caption = f.readline()
@@ -277,12 +277,12 @@ if __name__ == "__main__":
     class_keywords = b2t(
         loader, n_to_name, model, caption_dir,
         overwrite_captions=args.extract_caption,
-        result_file=f"result/{args.dataset + "_" + model_name + ".csv"}",
+        result_file=f"result/{args.dataset}_{model_name}.csv",
         device=device
     )
 
     # store keywords
     for class_name, df_keywords in class_keywords.items():
         df_keywords.to_csv(
-            os.path.join("diff", args.dataset + "_" + model_name + "_" + class_name + ".csv")
+            os.path.join("diff", f"{args.dataset}_{model_name}_{class_name}.csv")
         )
