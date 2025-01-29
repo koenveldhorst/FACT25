@@ -189,6 +189,7 @@ def main(args):
         model.load_state_dict(
             torch.load(os.path.join(log_dir, f"epoch_{checkpoint_epoch}.pth"))
         )
+        print(f"Loaded checkpoint 'epoch_{checkpoint_epoch}.pth'!")
 
     if args.optimizer == 'sgd':
         optimizer = torch.optim.SGD(
