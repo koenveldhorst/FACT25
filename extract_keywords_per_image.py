@@ -56,6 +56,7 @@ elif args.dataset == 'imagenet':
     reverse_mapping = {v: k for k, v in map_folder_to_imagenet.items()}
     image_dir = ''
     class_names = [reverse_mapping[label] for label in ["n03642806", "n04317175", "n02219486", "n03535780", "n02071294", "n03781244"]]
+    # class_names = [reverse_mapping[label] for label in ["n01440764", "n01443537", "n01484850", "n02219486"]]
 
 result_dir = 'result/'
 result_path = result_dir + args.dataset +"_" +  args.model.split(".")[0] + ".csv"
@@ -80,7 +81,8 @@ if args.dataset == 'imagenet-r' or args.dataset == 'imagenet':
         # calculate similarity
         print("Start calculating scores..")
         similarity_matrix = calc_similarity(image_dir, df_wrong_class['image'], keywords_class, extract_sim_matrix=True)
-        keywords_df = keyword_per_img(similarity_matrix, df_wrong_class['image'].tolist(), keywords_class)
+        keywords_df = keyword_per_img(similarity_matrix, df_wrong_class['image'].tolist(), df_wrong_class['pred'].tolist(), 
+                                      df_wrong_class['actual'].tolist(), df_wrong_class['caption'].tolist(), keywords_class)
         keyword_path = keyword_dir + args.dataset +"_" +  args.model.split(".")[0] + "_" +  str(labels) + ".csv"
         keywords_df.to_csv(keyword_path)
 
@@ -105,8 +107,10 @@ else:
     similarity_matrix_class_0 = calc_similarity(image_dir, df_wrong_class_0['image'], keywords_class_0, extract_sim_matrix=True)
     similarity_matrix_class_1 = calc_similarity(image_dir, df_wrong_class_1['image'], keywords_class_1, extract_sim_matrix=True)
 
-    keywords_df_class_0 = keyword_per_img(similarity_matrix_class_0, df_wrong_class_0['image'].tolist(), keywords_class_0)
-    keywords_df_class_1 = keyword_per_img(similarity_matrix_class_1, df_wrong_class_1['image'].tolist(), keywords_class_1)
+    keywords_df_class_0 = keyword_per_img(similarity_matrix_class_0, df_wrong_class_0['image'].tolist(), df_wrong_class_0['pred'].tolist(), 
+                                      df_wrong_class_0['actual'].tolist(), df_wrong_class_0['caption'].tolist(), keywords_class_0)
+    keywords_df_class_1 = keyword_per_img(similarity_matrix_class_1, df_wrong_class_1['image'].tolist(), df_wrong_class_1['pred'].tolist(), 
+                                      df_wrong_class_1['actual'].tolist(), df_wrong_class_1['caption'].tolist(), keywords_class_1)
  
     keyword_path_class_0 = keyword_dir + args.dataset +"_" +  args.model.split(".")[0] + "_" +  class_names[0] + ".csv"
     keyword_path_class_1 = keyword_dir + args.dataset +"_" +  args.model.split(".")[0] + "_" +  class_names[1] + ".csv"
