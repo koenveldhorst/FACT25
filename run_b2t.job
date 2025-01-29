@@ -26,15 +26,12 @@ source activate b2t
 #srun python b2t.py --dataset imagenet --model imagenet-resnet50
 
 # Run your code
-# pipenv run python -u b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
-# srun python -u b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
-
-# srun python b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
-#srun python b2t.py --dataset celeba --model best_model_CelebA_erm.pth
+#srun python b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
+#srun python b2t.py --dataset celeba --model best_model_CelebA_erm.pth --extract_caption
 
 #srun python infer_group_label.py --data_dir "data/cub/data/waterbird_complete95_forest2water2" --dataset waterbirds --save_path b2t_debias/pseudo_bias/waterbirds.pt
 #srun python infer_group_label.py --data_dir "data/celeba" --dataset celeba --save_path b2t_debias/pseudo_bias/celeba.pt
 
 
 #srun --ear-user-db=emissions/waterbirds bash b2t_debias/gdro/scripts/run_dro_waterbirds_b2t.sh "data/cub/data/waterbird_complete95_forest2water2" 380
-srun --ear-user-db=emissions/celeba bash b2t_debias/gdro/scripts/run_dro_celeba_b2t.sh "data/celeba" 164
+srun --ear-user-db=emissions/celeba2 bash b2t_debias/gdro/scripts/run_dro_celeba_b2t.sh "data/celeba" 164
