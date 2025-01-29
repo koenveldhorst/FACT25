@@ -1,7 +1,7 @@
 import argparse
 import os
 import shutil
-import time
+import datetime
 import warnings
 
 import torch
@@ -162,6 +162,7 @@ def train(
     return train_loss/(batch_idx+1)
 
 def main(args):
+    print(f"time: {datetime.datetime.now()}")
     torch.manual_seed(args.seed)
     device = "cuda"
     
@@ -207,6 +208,7 @@ def main(args):
             best_epoch = epoch
             state_dict = {'model': model.state_dict(), 'group_weights': group_weight_ema.group_weights}
             torch.save(state_dict, os.path.join(log_dir, f'epoch_{epoch+1}.pth'))
+        print(f"time: {datetime.datetime.now()}")
 
     print(f'Best worst group accuracy (val) at epoch {best_epoch}: {best_val_acc}')
     print(f'Best average accuracy (val) at epoch {best_epoch}: {best_val_avg_acc}')

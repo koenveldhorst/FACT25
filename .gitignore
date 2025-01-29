@@ -10,9 +10,11 @@ result/
 diff/
 function/clipcap.pt
 test/
-test.ipynb
-test2.ipynb
 __pycache__
 
 slurm_inference/*
 slurm*
+
+*.csv
+*.json
+*.ipynb
