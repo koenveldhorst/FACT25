@@ -163,7 +163,7 @@ def train(
 
 def main(args):
     torch.manual_seed(args.seed)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = "cuda"
     
     # TODO: is 2nd return value ever used?
     train_loader, _, valid_loader, test_loader = prepare_data(args)
