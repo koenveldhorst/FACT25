@@ -9,7 +9,7 @@ def keyword_per_img(similarity_matrix, list_images, pred, actual, caption, keywo
         actual_labels = [actual[i] for i in max_indices]
         caption_images = [caption[i] for i in max_indices]
         # keyword_list = [keywords_class[i] for i in max_value]
-        dict_img_keywords = {'Bias keywords': keywords_class, 'Images': best_match_images, 'Clip values': max_clip_values, 
+        dict_img_keywords = {'Bias keywords': keywords_class, 'Images': best_match_images, 'Clip values': max_clip_values.numpy(), 
                              'Predictions': predicted_labels, 'Actual': actual_labels, 'Captions': caption_images} 
         keywords_df = pd.DataFrame(dict_img_keywords)   
         return keywords_df
