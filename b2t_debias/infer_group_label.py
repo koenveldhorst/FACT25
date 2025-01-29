@@ -23,7 +23,7 @@ def main(args):
 
     # load dataset
     if args.dataset == 'waterbirds':
-        data_dir = os.path.join(args.data_dir, 'waterbird_complete95_forest2water2')
+        data_dir = args.data_dir
         train_dataset = waterbirds.Waterbirds(root=data_dir, split='train', transform=transform)
         templates = waterbirds_templates.templates
         class_templates = waterbirds_templates.class_templates

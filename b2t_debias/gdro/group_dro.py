@@ -16,7 +16,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 from b2t_debias.gdro.resnet import get_model
 from b2t_debias.gdro.data_loader import prepare_data
-from b2t_debias.gdro.arguments import get_arguments
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -184,7 +183,7 @@ def main(args):
     num_groups = 4
     group_weight_ema = GroupEMA(size=num_groups, step_size=0.01)
 
-    log_dir = os.path.join('results', args.dataset, args.name)
+    log_dir = os.path.join("gdro_log", args.dataset, args.name)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
         
@@ -197,10 +196,10 @@ def main(args):
         train_loss = train(
             train_loader, model, optimizer, epoch, args.epochs, args.batch_size, group_weight_ema, device
         )
-        writer.add_scalar(f'train/train_loss', train_loss, epoch)
+        writer.add_scalar("train/train_loss", train_loss, epoch)
 
-        valid_acc, valid_avg_acc = test(model, valid_loader, writer, epoch, device, 'valid')
-        test_acc, test_avg_acc = test(model, test_loader, writer, epoch, device, 'test')
+        valid_acc, valid_avg_acc = test(model, valid_loader, writer, epoch, device, "valid")
+        test_acc, test_avg_acc = test(model, test_loader, writer, epoch, device, "test")
         
         if valid_acc >= best_val_acc:
             best_val_acc, best_val_avg_acc = valid_acc, valid_avg_acc
