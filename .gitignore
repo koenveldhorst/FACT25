@@ -3,11 +3,14 @@ data/cub/
 data/celeba/
 data/imagenetR/
 data/imagenet/
+data/imagenet_variants/
 model/*
 result/
 diff/
 function/clipcap.pt
+test/
 __pycache__
 
+slurm_plotting/*
 slurm_inference/*
 slurm*
