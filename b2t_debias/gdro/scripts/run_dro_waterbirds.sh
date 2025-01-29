@@ -1,7 +1,7 @@
 DATA_ROOT=$1
 SEED=$2
 
-python gdro/group_dro.py --name gdro_resnet50_lr_1e-5_wd_1_epoch_300_seed_$SEED \
+python group_dro.py --name gdro_resnet50_lr_1e-5_wd_1_epoch_300_seed_$SEED \
 --dataset cub --image_size 224 \
 --data_root DATA_ROOT \
 --model resnet50 --pretrained imagenet --num_classes 2 \
