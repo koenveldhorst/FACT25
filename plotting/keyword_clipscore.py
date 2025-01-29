@@ -80,6 +80,9 @@ def create_clip_plot(csv_file_path, keywords_to_display):
     print(f"Saved figure to {fig_path}")
 
 
+def plot_clip_figure(args):
+    pass
+
 # Example usage:
 # csv_file = "path/to/your/csvfile.csv"
 # keywords = ["bamboo", "forest", "woods", "species", "bird"]
