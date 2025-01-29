@@ -162,23 +162,20 @@ def train(
     return train_loss/(batch_idx+1)
 
 def main(args):
+    print(f"time: {datetime.datetime.now()}")
+    torch.manual_seed(args.seed)
+    device = "cuda"
+
     log_dir = os.path.join("gdro_log", args.dataset, args.name)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
         
     writer = SummaryWriter(log_dir)
 
-    print(f"time: {datetime.datetime.now()}")
-    torch.manual_seed(args.seed)
-    device = "cuda"
-
     # TODO: is 2nd return value ever used?
     train_loader, _, valid_loader, test_loader = prepare_data(args)
     # create model
     model = build_model(args)
-
-    num_groups = 4
-    group_weight_ema = GroupEMA(size=num_groups, step_size=0.01)
 
     if args.optimizer == 'sgd':
         optimizer = torch.optim.SGD(
@@ -190,6 +187,8 @@ def main(args):
     else:
         raise NotImplementedError
 
+    num_groups = 4
+    group_weight_ema = GroupEMA(size=num_groups, step_size=0.01)
 
     best_val_acc, best_val_avg_acc = 0, 0
     best_test_acc, best_test_avg_acc = 0, 0
