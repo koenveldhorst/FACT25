@@ -18,6 +18,7 @@ cd $HOME/repo/
 source activate b2t
 
 # Run your code
-srun python extract_keywords_per_image.py --dataset imagenet --model imagenet-resnet50.pth
+# srun python extract_keywords_per_image.py --dataset imagenet --model imagenet-resnet50.pth
+srun python extract_keywords_per_image.py --dataset imagenet --model imagenet-ViT.pth
 
  
