@@ -51,7 +51,11 @@ elif args.dataset == 'celeba':
 elif args.dataset == 'imagenet-r':
     reverse_mapping = {v: k for k, v in map_folder_to_imagenet.items()}
     image_dir = ''
-    class_names = [reverse_mapping[label] for label in ["n03642806", "n04317175", "n02219486", "n03535780", "n02071294", "n03781244"]]
+    class_names = [reverse_mapping[label] for label in ["n01484850", "n02769748"]]
+elif args.dataset == 'imagenet-c':
+    reverse_mapping = {v: k for k, v in map_folder_to_imagenet.items()}
+    image_dir = ''
+    class_names = [reverse_mapping[label] for label in ["n02690373", "n02009912"]]
 elif args.dataset == 'imagenet':
     reverse_mapping = {v: k for k, v in map_folder_to_imagenet.items()}
     image_dir = ''
