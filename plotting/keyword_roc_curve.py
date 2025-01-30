@@ -47,8 +47,14 @@ def similarity_func(image_paths, keywords):
     image_features /= image_features.norm(dim=-1, keepdim=True)
     text_features /= text_features.norm(dim=-1, keepdim=True)
 
-    # Compute similarity (batch of images against keywords)
-    scores = (image_features @ text_features.T).cpu().numpy()
+    # Compute similarity in batches
+    scores = []
+    for i in range(0, image_features.size(0), 2000):
+        batch_image_features = image_features[i:i + 2000]
+        batch_scores = (batch_image_features @ text_features.T).cpu().numpy()
+        scores.append(batch_scores)
+
+    scores = np.vstack(scores)
     return scores
 
 
