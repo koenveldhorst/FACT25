@@ -158,10 +158,10 @@ def plot_roc_curves(subgroup_data, keywords, clip_scores, fig_path):
         plt.plot(fpr, tpr, label=f"{keyword} ({clip_scores[keyword]:.2f}) = {roc_auc:.3f}", linewidth=2)
 
     plt.plot([0, 1], [0, 1], color="gray", linestyle="--")  # Diagonal line for random guessing
-    plt.xlabel("False Positive Rate", fontsize=14)
-    plt.ylabel("True Positive Rate", fontsize=14)
-    plt.title("ROC Curves for Subgroups", fontsize=14)
-    plt.legend(loc="upper left", fontsize=10)
+    plt.xlabel("False Positive Rate", fontsize=24)
+    plt.ylabel("True Positive Rate", fontsize=24)
+    plt.title("ROC Curves for Subgroups", fontsize=24)
+    plt.legend(loc="upper left", fontsize=20)
     plt.tight_layout()
 
     plt.xlim([0, 1])
@@ -213,9 +213,9 @@ def plot_correlation(subgroup_data, keywords, clip_scores, fig_path):
 
     plt.scatter(clip_scores_array, auc_values, s=50, color="teal", alpha=0.8)
     plt.plot(x_range, y_range, color="gray", linestyle="--", linewidth=2)
-    plt.xlabel("CLIP Score", fontsize=14)
-    plt.ylabel("AUC Score", fontsize=14)
-    plt.title("Correlation between AUC and CLIP Score", fontsize=14)
+    plt.xlabel("CLIP Score", fontsize=24)
+    plt.ylabel("AUC Score", fontsize=24)
+    plt.title("Correlation between AUC and CLIP Score", fontsize=24)
 
     plt.fill_between(x_range, y_range - ci, y_range + ci, color="gray", alpha=0.2)
 
@@ -223,7 +223,7 @@ def plot_correlation(subgroup_data, keywords, clip_scores, fig_path):
         x=np.max(clip_scores_array) - 1.15,
         y=np.max(auc_values) - 0.01,
         s=f"coef = {slope:.3f}",
-        fontsize=12,
+        fontsize=22,
         color="black",
     )
 
@@ -298,8 +298,8 @@ def plot_roc_figure(args, keywords, roc_keywords, clip_scores):
     results = pd.read_csv(results_csv)
 
     # image subset
-    image_paths = results.loc[results["actual"] == class_n, "image"].to_list()
-    print(f"Completed loading {len(image_paths)} images")
+    images = results.loc[results["actual"] == class_n, "image"].to_list()
+    print(f"Completed loading {len(images)} images")
 
     # Compute scores and determine subgroups
     similarity_scores = similarity_func(images, keywords)

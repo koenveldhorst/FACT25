@@ -34,8 +34,10 @@ def plot_clip_figure(args, keywords, clip_scores):
             bar.get_y() + bar.get_height() / 2,  # Centered vertically
             f"{bar.get_width():.2f}",  # Format score with 2 decimal places
             va="center",
-            fontsize=10,
+            fontsize=20,
         )
+
+    plt.yticks(fontsize=20)
 
     # Customize plot appearance
     plt.axvline(0, color="black", linewidth=1, linestyle="--", alpha=0.6)  # Vertical zero-line
@@ -48,9 +50,9 @@ def plot_clip_figure(args, keywords, clip_scores):
     plt.grid(visible=False, axis="y")  # Ensure no gridlines on Y-axis
 
     # Adjusting X-axis spacing
-    plt.xticks(fontsize=10)
-    plt.xlabel("CLIP score", fontsize=12)
-    plt.title("CLIP Scores for Selected Keywords", fontsize=14)
+    plt.xticks(fontsize=20)
+    plt.xlabel("CLIP score", fontsize=22)
+    plt.title("CLIP Scores for Selected Keywords", fontsize=24)
     plt.gca().invert_yaxis()  # Invert Y-axis for top-to-bottom sorting
     plt.tight_layout()
 
