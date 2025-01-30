@@ -151,7 +151,7 @@ def plot_roc_curves(subgroup_data, keywords, clip_scores, fig_path):
         clip_scores (dict): Dictionary where keys are keywords and values are CLIP scores.
         fig_path (str): Path to save the figure.
     """
-    plt.figure(figsize=(9, 7))
+    plt.figure(figsize=(9, 10))
 
     for keyword in keywords:
         if keyword not in subgroup_data:
@@ -167,7 +167,7 @@ def plot_roc_curves(subgroup_data, keywords, clip_scores, fig_path):
     plt.xlabel("False Positive Rate", fontsize=28)
     plt.ylabel("True Positive Rate", fontsize=28)
     plt.title("ROC Curves for Subgroups", fontsize=28, pad=20)
-    plt.legend(loc="upper left", fontsize=24)
+    plt.legend(loc='upper right', bbox_to_anchor=(1.02, -0.15), fontsize=24)
     plt.tight_layout()
 
     plt.xlim([0, 1])
@@ -228,13 +228,7 @@ def plot_correlation(subgroup_data, keywords, clip_scores, fig_path):
 
     plt.fill_between(x_range, y_range - ci, y_range + ci, color="gray", alpha=0.2)
 
-    plt.text(
-        x=np.max(clip_scores_array) - 1.5,
-        y=np.max(auc_values) - 0.01,
-        s=f"coef = {slope:.3f}",
-        fontsize=26,
-        color="black",
-    )
+    plt.legend([f"coef = {slope:.3f}"], loc="upper right", fontsize=26, frameon=False)
 
     plt.xticks(fontsize=20)
     plt.yticks(fontsize=20)
