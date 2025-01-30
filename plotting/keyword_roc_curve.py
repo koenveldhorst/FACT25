@@ -241,7 +241,7 @@ def load_specifications(dataset_name, class_label):
             class_ids = ["n02071294", "n02219486", "n03535780", "n03642806", "n03781244", "n04317175"]
 
             class_n = next(
-                (imagenet_idx.id_to_name[class_id]
+                (imagenet_idx.id_to_n[class_id]
                 for class_id in class_ids
                 if class_label == imagenet_idx.id_to_name[class_id]),
                 None
@@ -300,9 +300,6 @@ def plot_roc_figure(args, keywords, roc_keywords, clip_scores):
     # image subset
     image_paths = results.loc[results["actual"] == class_n, "image"].to_list()
     print(f"Completed loading {len(image_paths)} images")
-
-    # TODO: TEMP
-    images = ["data/cub/data/waterbird_complete95_forest2water2/" + image for image in image_paths]
 
     # Compute scores and determine subgroups
     similarity_scores = similarity_func(images, keywords)
