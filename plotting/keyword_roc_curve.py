@@ -228,7 +228,8 @@ def plot_correlation(subgroup_data, keywords, clip_scores, fig_path):
 
     plt.fill_between(x_range, y_range - ci, y_range + ci, color="gray", alpha=0.2)
 
-    plt.legend([f"coef = {slope:.3f}"], loc="upper right", fontsize=26, frameon=False)
+    plt.plot([], [], ' ', label=f"coef = {slope:.3f}")
+    plt.legend(loc="upper right", fontsize=26, frameon=False)
 
     plt.xticks(fontsize=20)
     plt.yticks(fontsize=20)
