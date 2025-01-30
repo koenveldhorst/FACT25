@@ -112,7 +112,7 @@ def load_dataset(
 
             dataset = imagenet.ImageNet(
                 "data/imagenet_variants", imagenet_idx, transform,
-                classes=classes, dir=imagenet.IMAGENET_R_DIR
+                classes=classes, folder=imagenet.IMAGENET_R_DIR
             )
             caption_dir = dataset.caption_dir
 
