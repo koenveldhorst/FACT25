@@ -145,7 +145,7 @@ def plot_roc_curves(subgroup_data, keywords, clip_scores, fig_path):
         clip_scores (dict): Dictionary where keys are keywords and values are CLIP scores.
         fig_path (str): Path to save the figure.
     """
-    plt.figure(figsize=(6, 5))
+    plt.figure(figsize=(9, 7))
 
     for keyword in keywords:
         if keyword not in subgroup_data:
@@ -158,17 +158,20 @@ def plot_roc_curves(subgroup_data, keywords, clip_scores, fig_path):
         plt.plot(fpr, tpr, label=f"{keyword} ({clip_scores[keyword]:.2f}) = {roc_auc:.3f}", linewidth=2)
 
     plt.plot([0, 1], [0, 1], color="gray", linestyle="--")  # Diagonal line for random guessing
-    plt.xlabel("False Positive Rate", fontsize=24)
-    plt.ylabel("True Positive Rate", fontsize=24)
-    plt.title("ROC Curves for Subgroups", fontsize=24)
-    plt.legend(loc="upper left", fontsize=20)
+    plt.xlabel("False Positive Rate", fontsize=28)
+    plt.ylabel("True Positive Rate", fontsize=28)
+    plt.title("ROC Curves for Subgroups", fontsize=28, pad=20)
+    plt.legend(loc="upper left", fontsize=24)
     plt.tight_layout()
 
     plt.xlim([0, 1])
     plt.ylim([0, 1])
 
-    fig_path = fig_path + "_roc_plot.pdf"
-    plt.savefig(f"{fig_path}", dpi=300, bbox_inches="tight")
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+
+    fig_path = fig_path + "_roc_plot.png"
+    plt.savefig(f"{fig_path}", dpi=600, bbox_inches="tight")
     print(f"Saved figure to {fig_path}")
 
 
@@ -182,7 +185,7 @@ def plot_correlation(subgroup_data, keywords, clip_scores, fig_path):
         clip_scores (dict): Dictionary where keys are keywords and values are CLIP scores.
         fig_path (str): Path to save the figure.
     """
-    plt.figure(figsize=(6, 5))
+    plt.figure(figsize=(9, 7))
 
     auc_scores = []
     for keyword in keywords:
@@ -213,24 +216,27 @@ def plot_correlation(subgroup_data, keywords, clip_scores, fig_path):
 
     plt.scatter(clip_scores_array, auc_values, s=50, color="teal", alpha=0.8)
     plt.plot(x_range, y_range, color="gray", linestyle="--", linewidth=2)
-    plt.xlabel("CLIP Score", fontsize=24)
-    plt.ylabel("AUC Score", fontsize=24)
-    plt.title("Correlation between AUC and CLIP Score", fontsize=24)
+    plt.xlabel("CLIP Score", fontsize=28)
+    plt.ylabel("AUC Score", fontsize=28)
+    plt.title("Correlation between AUC and CLIP Score", fontsize=28, pad=20)
 
     plt.fill_between(x_range, y_range - ci, y_range + ci, color="gray", alpha=0.2)
 
     plt.text(
-        x=np.max(clip_scores_array) - 1.15,
+        x=np.max(clip_scores_array) - 1.5,
         y=np.max(auc_values) - 0.01,
         s=f"coef = {slope:.3f}",
-        fontsize=22,
+        fontsize=26,
         color="black",
     )
 
+    plt.xticks(fontsize=20)
+    plt.yticks(fontsize=20)
+
     plt.tight_layout()
 
-    fig_path = fig_path + "_AUC_clip_plot.pdf"
-    plt.savefig(f"{fig_path}", dpi=300, bbox_inches="tight")
+    fig_path = fig_path + "_AUC_clip_plot.png"
+    plt.savefig(f"{fig_path}", dpi=600, bbox_inches="tight")
     print(f"Saved figure to {fig_path}")
 
 
