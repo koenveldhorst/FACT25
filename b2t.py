@@ -55,7 +55,7 @@ def load_dataset(
             ])
 
             imagenet_idx = imagenet.Indexer("data/imagenet_variants/label_mapping.csv")
-            classes = ["n02219486"] #, "n03535780", "n04317175", "n03781244"] # ant, etc.
+            classes = ["n02690373", "n02009912"] # airliner, American egret
         case _:
             transform = classes = n_to_name = imagenet_idx = None
 

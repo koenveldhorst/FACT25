@@ -23,4 +23,5 @@ dependencies:
     - scikit-image
     - yake
     - tensorboard
+    - codecarbon
     - git+https://github.com/openai/CLIP
