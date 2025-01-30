@@ -36,6 +36,7 @@ from tqdm import tqdm
 from typing import List, Sequence, Dict, Set
 
 IMAGENET_C_DIR = "imagenet_c"
+IMAGENET_R_DIR = "imagenet_r"
 IMAGENET_DIR = "imagenet"
 
 # number of corruption levels for imagenet-c
@@ -155,13 +156,15 @@ class ImageNetC(Dataset):
 class ImageNet(Dataset):
     def __init__(
             self, root: str, indexer: Indexer, transform,
-            classes: Set[str] = None, start_idx=0, max_per_class: int = None
+            classes: Set[str] = None, start_idx=0, max_per_class: int = None,
+            folder=IMAGENET_DIR
         ):
         """
         # Args
         * `classes`: Wordnet IDs to load. If `None` all classes are loaded
         * `start_idx`: Index to start loading images at for each class
         * `max_per_class`: Maximum images per class to load
+        * `folder`: directory within root that contains the class folders. Defaults to IMAGENET_DIR
         """
 
         assert os.path.exists(root), f"'{root}' does not exist yet. Please generate the dataset first."
@@ -172,7 +175,7 @@ class ImageNet(Dataset):
         self.caption_dir = os.path.join(root, "imagenet_caption")
         self.classes = []
 
-        dir = os.path.join(root, IMAGENET_DIR)
+        dir = os.path.join(root, folder)
 
         # iterate over classes
         for cls in os.listdir(dir):

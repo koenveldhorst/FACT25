@@ -55,7 +55,6 @@ def load_dataset(
             ])
 
             imagenet_idx = imagenet.Indexer("data/imagenet_variants/label_mapping.csv")
-            classes = ["n02690373", "n02009912"] # airliner, American egret
         case _:
             transform = classes = n_to_name = imagenet_idx = None
 
@@ -99,6 +98,8 @@ def load_dataset(
 
             n_to_name = { imagenet_idx.id_to_n[id]: imagenet_idx.id_to_name[id] for id in dataset.classes }
         case "imagenet-c":
+            classes = ["n02690373", "n02009912"] # airliner, American egret
+
             dataset = imagenet.ImageNetC(
                 "data/imagenet_variants", "weather/snow", imagenet_idx, transform,
                 classes=classes
@@ -106,6 +107,14 @@ def load_dataset(
             caption_dir = dataset.caption_dir
 
             n_to_name = { imagenet_idx.id_to_n[id]: imagenet_idx.id_to_name[id] for id in dataset.classes }
+        case "imagenet-r":
+            classes = ["n02769748", "n01484850"] # backpack, white shark
+
+            dataset = imagenet.ImageNet(
+                "data/imagenet_variants", imagenet_idx, transform,
+                classes=classes, dir=imagenet.IMAGENET_R_DIR
+            )
+            caption_dir = dataset.caption_dir
 
     loader = DataLoader(dataset, batch_size=256, num_workers=4, drop_last=False)
 
