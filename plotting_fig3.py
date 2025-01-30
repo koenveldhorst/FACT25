@@ -38,11 +38,10 @@ def sample_subset_keywords(keywords, clip_scores):
     Returns:
         subset_keywords (list): List of sampled keywords.
     """
-    np.random.seed(42)
     keywords = np.array(keywords)
-    high_scores = np.random.choice(keywords[:5], 2, replace=False)
-    low_scores = np.random.choice(keywords[-5:], 2, replace=False)
-    mid_scores = np.random.choice(keywords[7:-7], 1, replace=False)
+    high_scores = keywords[:2]
+    low_scores = keywords[-2:]
+    mid_scores = list(keywords[len(keywords) // 2])
 
     subset_keywords = np.concatenate((high_scores, mid_scores, low_scores))
     subset_keywords = sorted(subset_keywords, key=lambda x: clip_scores[x], reverse=True)
