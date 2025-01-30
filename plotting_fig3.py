@@ -41,7 +41,7 @@ def sample_subset_keywords(keywords, clip_scores):
     keywords = np.array(keywords)
     high_scores = keywords[:2]
     low_scores = keywords[-2:]
-    mid_scores = list(keywords[len(keywords) // 2])
+    mid_scores = [keywords[len(keywords) // 2]]
 
     subset_keywords = np.concatenate((high_scores, mid_scores, low_scores))
     subset_keywords = sorted(subset_keywords, key=lambda x: clip_scores[x], reverse=True)
