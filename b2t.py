@@ -115,6 +115,8 @@ def load_dataset(
                 classes=classes, folder=imagenet.IMAGENET_R_DIR
             )
             caption_dir = dataset.caption_dir
+            
+            n_to_name = { imagenet_idx.id_to_n[id]: imagenet_idx.id_to_name[id] for id in dataset.classes }
 
     loader = DataLoader(dataset, batch_size=256, num_workers=4, drop_last=False)
 
