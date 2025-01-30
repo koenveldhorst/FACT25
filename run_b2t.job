@@ -18,7 +18,7 @@ cd $HOME/repo/
 source activate b2t
 
 #srun python b2t.py --dataset imagenet --model imagenet-ViT
-srun python b2t.py --dataset imagenet-r --model imagenet-resnet50
+srun python b2t.py --dataset imagenet-c --model imagenet-resnet50
 
 #srun python b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
 #srun python b2t.py --dataset celeba --model best_model_CelebA_erm.pth --extract_caption
