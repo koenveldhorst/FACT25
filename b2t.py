@@ -15,6 +15,8 @@ from function.extract_keyword import extract_keyword
 from function.calculate_similarity import calc_similarity
 from function.print_similarity import print_similarity
 
+from b2t_debias.gdro.resnet import resnet50
+
 from tqdm import tqdm
 import clip
 import os
@@ -279,7 +281,12 @@ if __name__ == "__main__":
             model = models.vit_b_16(weights="IMAGENET1K_V1")
         # otherwise load from model folder
         case _:
-            model = torch.load(os.path.join("model/", args.model), map_location=device)
+            checkpoint = torch.load(os.path.join("model/", args.model), map_location=device)
+            if type(checkpoint) is dict:
+                model = resnet50(pretrained=False, num_classes=2)
+                model.load_state_dict(checkpoint['model'])
+            else:
+                model = checkpoint
 
     # load data
     loader, n_to_name, caption_dir = load_dataset(args.dataset)
