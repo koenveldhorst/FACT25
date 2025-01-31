@@ -47,8 +47,14 @@ def similarity_func(image_paths, keywords):
     image_features /= image_features.norm(dim=-1, keepdim=True)
     text_features /= text_features.norm(dim=-1, keepdim=True)
 
-    # Compute similarity (batch of images against keywords)
-    scores = (image_features @ text_features.T).cpu().numpy()
+    # Compute similarity in batches
+    scores = []
+    for i in range(0, image_features.size(0), 2000):
+        batch_image_features = image_features[i:i + 2000]
+        batch_scores = (batch_image_features @ text_features.T).cpu().numpy()
+        scores.append(batch_scores)
+
+    scores = np.vstack(scores)
     return scores
 
 
@@ -145,7 +151,7 @@ def plot_roc_curves(subgroup_data, keywords, clip_scores, fig_path):
         clip_scores (dict): Dictionary where keys are keywords and values are CLIP scores.
         fig_path (str): Path to save the figure.
     """
-    plt.figure(figsize=(6, 5))
+    plt.figure(figsize=(9, 10))
 
     for keyword in keywords:
         if keyword not in subgroup_data:
@@ -158,17 +164,20 @@ def plot_roc_curves(subgroup_data, keywords, clip_scores, fig_path):
         plt.plot(fpr, tpr, label=f"{keyword} ({clip_scores[keyword]:.2f}) = {roc_auc:.3f}", linewidth=2)
 
     plt.plot([0, 1], [0, 1], color="gray", linestyle="--")  # Diagonal line for random guessing
-    plt.xlabel("False Positive Rate", fontsize=14)
-    plt.ylabel("True Positive Rate", fontsize=14)
-    plt.title("ROC Curves for Subgroups", fontsize=14)
-    plt.legend(loc="upper left", fontsize=10)
+    plt.xlabel("False Positive Rate", fontsize=28)
+    plt.ylabel("True Positive Rate", fontsize=28)
+    plt.title("ROC Curves for Subgroups", fontsize=28, pad=20)
+    plt.legend(loc='upper right', bbox_to_anchor=(1.02, -0.15), fontsize=24)
     plt.tight_layout()
 
     plt.xlim([0, 1])
     plt.ylim([0, 1])
 
-    fig_path = fig_path + "_roc_plot.pdf"
-    plt.savefig(f"{fig_path}", dpi=300, bbox_inches="tight")
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+
+    fig_path = fig_path + "_roc_plot.png"
+    plt.savefig(f"{fig_path}", dpi=600, bbox_inches="tight")
     print(f"Saved figure to {fig_path}")
 
 
@@ -182,7 +191,7 @@ def plot_correlation(subgroup_data, keywords, clip_scores, fig_path):
         clip_scores (dict): Dictionary where keys are keywords and values are CLIP scores.
         fig_path (str): Path to save the figure.
     """
-    plt.figure(figsize=(6, 5))
+    plt.figure(figsize=(9, 7))
 
     auc_scores = []
     for keyword in keywords:
@@ -213,24 +222,22 @@ def plot_correlation(subgroup_data, keywords, clip_scores, fig_path):
 
     plt.scatter(clip_scores_array, auc_values, s=50, color="teal", alpha=0.8)
     plt.plot(x_range, y_range, color="gray", linestyle="--", linewidth=2)
-    plt.xlabel("CLIP Score", fontsize=14)
-    plt.ylabel("AUC Score", fontsize=14)
-    plt.title("Correlation between AUC and CLIP Score", fontsize=14)
+    plt.xlabel("CLIP Score", fontsize=28)
+    plt.ylabel("AUC Score", fontsize=28)
+    plt.title("Correlation between AUC and CLIP Score", fontsize=28, pad=20)
 
     plt.fill_between(x_range, y_range - ci, y_range + ci, color="gray", alpha=0.2)
 
-    plt.text(
-        x=np.max(clip_scores_array) - 1.15,
-        y=np.max(auc_values) - 0.01,
-        s=f"coef = {slope:.3f}",
-        fontsize=12,
-        color="black",
-    )
+    plt.plot([], [], ' ', label=f"coef = {slope:.3f}")
+    plt.legend(loc="upper right", fontsize=26, frameon=False)
+
+    plt.xticks(fontsize=20)
+    plt.yticks(fontsize=20)
 
     plt.tight_layout()
 
-    fig_path = fig_path + "_AUC_clip_plot.pdf"
-    plt.savefig(f"{fig_path}", dpi=300, bbox_inches="tight")
+    fig_path = fig_path + "_AUC_clip_plot.png"
+    plt.savefig(f"{fig_path}", dpi=600, bbox_inches="tight")
     print(f"Saved figure to {fig_path}")
 
 
@@ -241,7 +248,7 @@ def load_specifications(dataset_name, class_label):
             class_ids = ["n02071294", "n02219486", "n03535780", "n03642806", "n03781244", "n04317175"]
 
             class_n = next(
-                (imagenet_idx.id_to_name[class_id]
+                (imagenet_idx.id_to_n[class_id]
                 for class_id in class_ids
                 if class_label == imagenet_idx.id_to_name[class_id]),
                 None
@@ -298,11 +305,8 @@ def plot_roc_figure(args, keywords, roc_keywords, clip_scores):
     results = pd.read_csv(results_csv)
 
     # image subset
-    image_paths = results.loc[results["actual"] == class_n, "image"].to_list()
-    print(f"Completed loading {len(image_paths)} images")
-
-    # TODO: TEMP
-    images = ["data/cub/data/waterbird_complete95_forest2water2/" + image for image in image_paths]
+    images = results.loc[results["actual"] == class_n, "image"].to_list()
+    print(f"Completed loading {len(images)} images")
 
     # Compute scores and determine subgroups
     similarity_scores = similarity_func(images, keywords)

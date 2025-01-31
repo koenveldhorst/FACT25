@@ -17,7 +17,7 @@ def plot_clip_figure(args, keywords, clip_scores):
     scores = [clip_scores[keyword] for keyword in keywords]
 
     # Plot the horizontal bar chart
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(9, 7))
     bars = plt.barh(
         keywords_to_display,
         scores,
@@ -34,8 +34,10 @@ def plot_clip_figure(args, keywords, clip_scores):
             bar.get_y() + bar.get_height() / 2,  # Centered vertically
             f"{bar.get_width():.2f}",  # Format score with 2 decimal places
             va="center",
-            fontsize=10,
+            fontsize=24,
         )
+
+    plt.yticks(fontsize=24)
 
     # Customize plot appearance
     plt.axvline(0, color="black", linewidth=1, linestyle="--", alpha=0.6)  # Vertical zero-line
@@ -48,14 +50,14 @@ def plot_clip_figure(args, keywords, clip_scores):
     plt.grid(visible=False, axis="y")  # Ensure no gridlines on Y-axis
 
     # Adjusting X-axis spacing
-    plt.xticks(fontsize=10)
-    plt.xlabel("CLIP score", fontsize=12)
-    plt.title("CLIP Scores for Selected Keywords", fontsize=14)
+    plt.xticks(fontsize=20)
+    plt.xlabel("CLIP score", fontsize=26)
+    plt.title("CLIP Scores for Selected Keywords", fontsize=28, pad=20)
     plt.gca().invert_yaxis()  # Invert Y-axis for top-to-bottom sorting
     plt.tight_layout()
 
     fig_dir = f"plotting/plots/{args.dataset}"
     os.makedirs(fig_dir, exist_ok=True)
-    fig_path = f"{fig_dir}/{args.class_label}_clip_plot.pdf"
-    plt.savefig(f"{fig_path}", dpi=300, bbox_inches="tight")
+    fig_path = f"{fig_dir}/{args.class_label}_clip_plot.png"
+    plt.savefig(f"{fig_path}", dpi=600, bbox_inches="tight")
     print(f"Saved figure to {fig_path}")
