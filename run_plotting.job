@@ -1,0 +1,31 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu_h100
+#SBATCH --gpus=1
+#SBATCH --job-name=PLOT3
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=18
+#SBATCH --time=00:10:00
+#SBATCH --output=slurm_plotting/fig3_imagenet_slurm_output_%A.out
+
+module purge
+module load 2023
+module load Anaconda3/2023.07-2
+
+# Your job starts in the directory where you call sbatch
+cd $HOME/repo/
+# Activate your environment
+source activate b2t
+
+#srun python plotting_fig3.py --dataset imagenet --class_label 'ant, emmet, pismire'
+#srun python plotting_fig3.py --dataset imagenet --class_label 'horizontal bar, high bar'
+#srun python plotting_fig3.py --dataset imagenet --class_label 'stethoscope'
+#srun python plotting_fig3.py --dataset imagenet --class_label 'monastery'
+#srun python plotting_fig3.py --dataset imagenet --class_label 'laptop, laptop computer'
+#srun python plotting_fig3.py --dataset imagenet --class_label 'killer whale, killer, orca, grampus, sea wolf, Orcinus orca'
+
+#srun python plotting_fig3.py --dataset waterbird --class_label waterbird
+srun python plotting_fig3.py --dataset waterbird --class_label landbird
+
+srun python plotting_fig3.py --dataset celeba --class_label blond
+srun python plotting_fig3.py --dataset celeba --class_label 'not blond'

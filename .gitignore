@@ -1,13 +1,21 @@
 data/celebA/
 data/cub/
 data/celeba/
-data/imagenetR/
-data/imagenet/
+data/imagenet_variants/
+data/imagenet_variants_curated/
+b2t_debias/pseudo_bias/
+b2t_debias/results/
 model/*
 result/
 diff/
 function/clipcap.pt
+test/
 __pycache__
 
+slurm_plotting/*
 slurm_inference/*
 slurm*
+
+*.csv
+*.json
+*.ipynb

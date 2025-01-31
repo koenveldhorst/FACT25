@@ -88,10 +88,30 @@ class_templates = [
 
 class_keywords_all = [
     [
-        "",
+        "actress",             
+        "hair color",          
+        "model",               
+        "long hair",           
+        "premiere of romantic",
+        "hair",                
+        "color",              
+        "style",               
+        "love",                
+        "premiere",           
+        "romantic comedy film",
+        "romantic comedy",     
+        "premiere of comedy",  
     ],
     [
-        "male",
-        "man",
+        "man",   
+        "player",
+        "comedy",
+        "artist",
+        "person",
+        "film",  
+        "actor", 
+        "love",  
+        "face",  
+        "hair",  
     ]
 ]

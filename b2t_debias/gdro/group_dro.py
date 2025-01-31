@@ -1,7 +1,7 @@
 import argparse
 import os
 import shutil
-import time
+import datetime
 import warnings
 
 import torch
@@ -14,21 +14,12 @@ import torch.utils.data
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-from resnet import get_model
-from data_loader import prepare_data
-from arguments import get_arguments
+from b2t_debias.gdro.resnet import get_model
+from b2t_debias.gdro.data_loader import prepare_data
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-args = get_arguments()
-use_cuda = True
-torch.manual_seed(args.seed)
-device = torch.device("cuda" if use_cuda else "cpu")
-
-print(args)
-
-
-def build_model():
+def build_model(args):
     model = get_model(args)
         
     if torch.cuda.is_available():
@@ -67,7 +58,7 @@ class GroupEMA:
         return weighted_loss
 
 
-def test(model, test_loader, writer, epoch, log='valid'):
+def test(model, test_loader, writer, epoch, device, log='valid'):
     model.eval()
     
     ys = []
@@ -76,17 +67,17 @@ def test(model, test_loader, writer, epoch, log='valid'):
     corrects = []
 
     with torch.no_grad():
-        for batch_idx, batch in enumerate(test_loader):
-            inputs, targets = batch['x'].to(device), batch['y'].to(device)
+        for batch in test_loader:
+            inputs, targets = batch["img"].to(device), batch["label"].to(device)
             y_hat = model(inputs)
-            test_loss = F.cross_entropy(y_hat, targets, reduction='none')
+            test_loss = F.cross_entropy(y_hat, targets, reduction="none")
             _, predicted = y_hat.cpu().max(1)
-            correct = predicted.eq(batch['y'])
+            correct = predicted.eq(batch["label"])
             
             test_losses.append(test_loss.cpu())
             corrects.append(correct)
-            ys.append(batch['y'])
-            bs.append(batch['a'])
+            ys.append(batch["label"])
+            bs.append(batch["spurious_label"])
             
     test_losses = torch.cat(test_losses)
     corrects = torch.cat(corrects)
@@ -126,7 +117,10 @@ def test(model, test_loader, writer, epoch, log='valid'):
     return worst_accuracy, accuracy
 
 
-def train(train_loader, model, optimizer, epoch):
+def train(
+        train_loader, model, optimizer, epoch, n_epochs, batch_size,
+        group_weight_ema, device
+    ):
     print('\nEpoch: %d' % epoch)
     
     train_loss = 0
@@ -135,7 +129,7 @@ def train(train_loader, model, optimizer, epoch):
 
     for batch_idx, batch in enumerate(train_loader):
         model.train()
-        inputs, targets, biases = batch['x'].to(device), batch['y'].to(device), batch['a'].to(device)
+        inputs, targets, biases = batch["img"].to(device), batch["label"].to(device), batch["spurious_label"].to(device)
 
         y_hat = model(inputs)
         cost_y = criterion(y_hat, targets)
@@ -161,44 +155,52 @@ def train(train_loader, model, optimizer, epoch):
                   'Iters: [%d/%d]\t'
                   'Loss: %.4f\t'
                   'Prec@1 %.2f\t' % (
-                      (epoch + 1), args.epochs, batch_idx + 1, len(train_loader.dataset)/args.batch_size, (train_loss / (batch_idx + 1)),
+                      (epoch + 1), n_epochs, batch_idx + 1, len(train_loader.dataset)/batch_size, (train_loss / (batch_idx + 1)),
                       prec_train)
                   )
                 
     return train_loss/(batch_idx+1)
 
+def main(args):
+    print(f"time: {datetime.datetime.now()}")
+    torch.manual_seed(args.seed)
+    device = "cuda"
 
-train_loader, _, valid_loader, test_loader = prepare_data(args)
-# create model
-model = build_model()
+    log_dir = os.path.join("gdro_log", args.dataset, args.name)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+        
+    writer = SummaryWriter(log_dir)
 
-if args.optimizer == 'sgd':
-    optimizer = torch.optim.SGD(model.parameters(), args.lr,
-                                momentum=args.momentum, weight_decay=args.weight_decay)
-elif args.optimizer == 'adam':
-    optimizer = torch.optim.Adam(model.parameters(), args.lr)
-else:
-    raise NotImplementedError
+    # TODO: is 2nd return value ever used?
+    train_loader, _, valid_loader, test_loader = prepare_data(args)
+    # create model
+    model = build_model(args)
 
-num_groups = 4
-group_weight_ema = GroupEMA(size=num_groups, step_size=0.01)
+    if args.optimizer == 'sgd':
+        optimizer = torch.optim.SGD(
+            model.parameters(), args.lr,
+            momentum=args.momentum, weight_decay=args.weight_decay
+        )
+    elif args.optimizer == 'adam':
+        optimizer = torch.optim.Adam(model.parameters(), args.lr)
+    else:
+        raise NotImplementedError
 
-log_dir = os.path.join('results', args.dataset, args.name)
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-    
-writer = SummaryWriter(log_dir)
+    num_groups = 4
+    group_weight_ema = GroupEMA(size=num_groups, step_size=0.01)
 
-def main():
     best_val_acc, best_val_avg_acc = 0, 0
     best_test_acc, best_test_avg_acc = 0, 0
     best_epoch = 0
     for epoch in range(args.epochs):
-        train_loss = train(train_loader, model, optimizer, epoch)
-        writer.add_scalar(f'train/train_loss', train_loss, epoch)
+        train_loss = train(
+            train_loader, model, optimizer, epoch, args.epochs, args.batch_size, group_weight_ema, device
+        )
+        writer.add_scalar("train/train_loss", train_loss, epoch)
 
-        valid_acc, valid_avg_acc = test(model, valid_loader, writer, epoch, 'valid')
-        test_acc, test_avg_acc = test(model, test_loader, writer, epoch, 'test')
+        valid_acc, valid_avg_acc = test(model, valid_loader, writer, epoch, device, "valid")
+        test_acc, test_avg_acc = test(model, test_loader, writer, epoch, device, "test")
         
         if valid_acc >= best_val_acc:
             best_val_acc, best_val_avg_acc = valid_acc, valid_avg_acc
@@ -206,12 +208,9 @@ def main():
             best_epoch = epoch
             state_dict = {'model': model.state_dict(), 'group_weights': group_weight_ema.group_weights}
             torch.save(state_dict, os.path.join(log_dir, f'epoch_{epoch+1}.pth'))
+        print(f"time: {datetime.datetime.now()}")
 
     print(f'Best worst group accuracy (val) at epoch {best_epoch}: {best_val_acc}')
     print(f'Best average accuracy (val) at epoch {best_epoch}: {best_val_avg_acc}')
     print(f'Best worst group accuracy (test) at epoch {best_epoch}: {best_test_acc}')
     print(f'Best average accuracy (test) at epoch {best_epoch}: {best_test_avg_acc}')
-
-
-if __name__ == '__main__':
-    main()
