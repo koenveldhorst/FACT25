@@ -50,11 +50,7 @@ The main point of entry to the code is ```b2t.py```
   - If set ```True```, automatically generate ```[root_dir]/diff/``` and store csv file of results there
 
 ## CelebA
-Our code expects the following files/folders in the ```[root_dir]/data/celebA``` directory:
-- ```data/list_eval_partition.csv```
-- ```data/list_attr_celeba.csv```
-- ```data/image_align_celeba/```
-
+Our code expects the CelebA dataset to be installed in the ```[root_dir]/data/celeba``` directory
 
 A sample command to run ```b2t``` on CelebA with pretrained erm model is:
 ```bash
