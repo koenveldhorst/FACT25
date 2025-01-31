@@ -2,6 +2,8 @@
 
 import torchvision.models as models
 import torchvision.transforms as transforms
+import torchvision.datasets as dataset
+import torchvision.models as models
 from torch.utils.data import DataLoader
 import torch
 from torch import nn
@@ -16,6 +18,7 @@ from function.calculate_similarity import calc_similarity
 from function.print_similarity import print_similarity
 
 from b2t_debias.gdro.resnet import resnet50
+from mapping_labels import map_folder_to_imagenet
 
 from tqdm import tqdm
 import clip
