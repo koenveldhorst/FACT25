@@ -70,6 +70,8 @@ A sample command to run ```b2t``` on Waterbirds with pretrained erm model is:
 ```bash
 $ python b2t.py --dataset waterbird --model best_model_Waterbirds_erm.pth
 ```
+## ImageNet, ImageNet-C, ImageNet-R
+Our code expects the ImageNet datasets to be stored in the file structure as described in ```data/imagenet.py```.
 
 ## Other Datasets and Models
 You can run ```b2t``` on other datasets too with different models pretrained on ImageNet using the following sample commands:
