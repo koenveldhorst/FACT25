@@ -83,7 +83,8 @@ $ python b2t.py --dataset imagenet --model imagenet-resnet50
 
 ## Plotting
 Several figures for CLIP scores, ROC curves, and the correlation between AUC and CLIP scores, are already included in the ```/plotting``` folder.
-To generate these figures, use the following sample commands:
+To generate these figures, first run b2t.py for the corresponding dataset and class to generate the necessary result and keyword files. 
+use the following sample commands:
 ```bash
 $ python plotting_fig3.py --dataset imagenet --class_label 'ant, emmet, pismire'
 $ python plotting_fig3.py --dataset imagenet --class_label 'horizontal bar, high bar'
