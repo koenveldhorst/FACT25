@@ -5,11 +5,15 @@ from pathlib import Path
 import skimage.io as io
 from PIL import Image
 from tqdm import tqdm
+import pandas as pd  
 
 def list_chunk(lst, n):
     return [lst[i:i+n] for i in range(0, len(lst), n)]
 
-def calc_similarity(images, keywords, model, preprocess, device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
+def calc_similarity(
+        images, keywords, model, preprocess, extract_sim_matrix=False,
+        device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    ):
     # return nothing if there are no keywords
     if len(keywords) == 0:
         return torch.empty(0)
@@ -36,6 +40,9 @@ def calc_similarity(images, keywords, model, preprocess, device=torch.device("cu
         similarity = (100.0 * image_features @ text_features.T) # (1909, 20)
         similarity_list.append(similarity)
 
-    similarity = torch.cat(similarity_list).mean(dim=0)
-
-    return similarity
+    if extract_sim_matrix: 
+        similarity_matrix = torch.cat(similarity_list)
+        return similarity_matrix
+    else: 
+        similarity = torch.cat(similarity_list).mean(dim=0)
+        return similarity

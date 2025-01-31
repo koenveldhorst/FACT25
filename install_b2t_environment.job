@@ -13,7 +13,6 @@ module load 2023
 module load Anaconda3/2023.07-2
 
 cd $HOME/repo/
-conda env remove -n b2t
-conda env create -f b2t_environment.yaml
+conda env update -f b2t_environment.yaml
 
 source activate b2t
