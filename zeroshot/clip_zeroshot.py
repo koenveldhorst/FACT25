@@ -83,6 +83,6 @@ def main(args):
             _, pred = torch.max(probs, dim=1)
 
             total_correct += torch.sum((pred == target).long())
-            max_correct()
+            max_correct += len(batch)
 
     print(f"Accuracy: {total_correct / max_correct:.2f} ({total_correct} / {max_correct})")
