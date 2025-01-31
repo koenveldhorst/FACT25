@@ -17,6 +17,7 @@ from function.extract_keyword import extract_keyword
 from function.calculate_similarity import calc_similarity
 from function.print_similarity import print_similarity
 
+from b2t_debias.gdro.resnet import resnet50
 from mapping_labels import map_folder_to_imagenet
 
 from tqdm import tqdm
@@ -59,7 +60,6 @@ def load_dataset(
             ])
 
             imagenet_idx = imagenet.Indexer("data/imagenet_variants/label_mapping.csv")
-            classes = ["n02219486"] #, "n03535780", "n04317175", "n03781244"] # ant, etc.
         case _:
             transform = classes = n_to_name = imagenet_idx = None
 
@@ -103,12 +103,24 @@ def load_dataset(
 
             n_to_name = { imagenet_idx.id_to_n[id]: imagenet_idx.id_to_name[id] for id in dataset.classes }
         case "imagenet-c":
+            classes = ["n02690373", "n02009912"] # airliner, American egret
+
             dataset = imagenet.ImageNetC(
                 "data/imagenet_variants", "weather/snow", imagenet_idx, transform,
                 classes=classes
             )
             caption_dir = dataset.caption_dir
 
+            n_to_name = { imagenet_idx.id_to_n[id]: imagenet_idx.id_to_name[id] for id in dataset.classes }
+        case "imagenet-r":
+            classes = ["n02769748", "n01484850"] # backpack, white shark
+
+            dataset = imagenet.ImageNet(
+                "data/imagenet_variants", imagenet_idx, transform,
+                classes=classes, folder=imagenet.IMAGENET_R_DIR
+            )
+            caption_dir = dataset.caption_dir
+            
             n_to_name = { imagenet_idx.id_to_n[id]: imagenet_idx.id_to_name[id] for id in dataset.classes }
 
     loader = DataLoader(dataset, batch_size=256, num_workers=4, drop_last=False)
@@ -272,7 +284,12 @@ if __name__ == "__main__":
             model = models.vit_b_16(weights="IMAGENET1K_V1")
         # otherwise load from model folder
         case _:
-            model = torch.load(os.path.join("model/", args.model), map_location=device)
+            checkpoint = torch.load(os.path.join("model/", args.model), map_location=device)
+            if type(checkpoint) is dict:
+                model = resnet50(pretrained=False, num_classes=2)
+                model.load_state_dict(checkpoint['model'])
+            else:
+                model = checkpoint
 
     # load data
     loader, n_to_name, caption_dir = load_dataset(args.dataset)
