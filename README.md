@@ -1,7 +1,7 @@
-# Bias-to-Text (B2T): Visual Biases as Keywords
+# On the reproducability of ["**Bias-to-Text: Debiasing Unknown Visual Biases through Language Interpretation**."](https://arxiv.org/abs/2301.11104)
 
-Implementation of the bias-to-text (B2T) algorithm described in ["**Bias-to-Text: Debiasing Unknown Visual Biases through Language Interpretation**."](https://arxiv.org/abs/2301.11104)
-B2T identifies and mitigates visual biases in image classifiers and text-to-image generative models using language descriptions.
+On the reproducability of results and analyses presented in ["**Bias-to-Text: Debiasing Unknown Visual Biases through Language Interpretation**."](https://arxiv.org/abs/2301.11104)
+B2T identifies and mitigates visual biases in image classifiers.
 
 
 ## Example Results
