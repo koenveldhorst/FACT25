@@ -84,7 +84,8 @@ $ python b2t.py --dataset imagenet --model imagenet-resnet50
 
 
 ## Plotting
-To produce the figures for CLIP scores, ROC curves and the correlation between AUC and CLIP score, use the following sample commands:
+Several figures for CLIP scores, ROC curves, and the correlation between AUC and CLIP scores, are already included in the ```/plotting``` folder.
+To generate these figures, use the following sample commands:
 ```bash
 $ python plotting_fig3.py --dataset imagenet --class_label 'ant, emmet, pismire'
 $ python plotting_fig3.py --dataset imagenet --class_label 'horizontal bar, high bar'
@@ -102,7 +103,27 @@ $ python plotting_fig3.py --dataset celeba --class_label 'not blond'
 
 ## Debiasing classifiers with B2T
 <!-- To reproduce the debiasing classifier experiments, see [b2t_debias](b2t_debias).   -->
-To reproduce the debiasing classifier experiments, use the following commands.
+To reproduce the debiasing classifier experiments, see the following instructions.
+
+
+For inferring group labels, run the following command.
+```bash
+$ python infer_group_label.py --data_dir [PATH TO DATASET] --dataset [DATASET] --save_path pseudo_bias/[DATASET].pt
+```
+
+To train debiased classifiers with GroupDRO using ground truth group label, run following script. 
+
+```bash
+$ bash gdro/scripts/run_dro_[DATASET].sh [PATH TO DATASET] [SEED]
+```
+
+To train debiased classifier using B2T inferred group labels, run following script. 
+
+```bash
+$ bash gdro/scripts/run_dro_[DATASET]_b2t.sh [PATH TO DATASET] [SEED]
+```
+
+Sample commands to do the aforementioned experiments:
 ```bash
 $ python infer_group_label.py --data_dir "data/cub/data/waterbird_complete95_forest2water2" --dataset waterbirds --save_path b2t_debias/pseudo_bias/waterbirds.pt
 $ python infer_group_label.py --data_dir "data/celeba" --dataset celeba --save_path b2t_debias/pseudo_bias/celeba.pt
@@ -111,5 +132,5 @@ $ bash b2t_debias/gdro/scripts/run_dro_waterbirds_b2t.sh "data/cub/data/waterbir
 $ bash b2t_debias/gdro/scripts/run_dro_celeba_b2t.sh "data/celeba" 164
 ```
 
-## Diffusion models with B2T
-To reproduce the diffusion model experiments, see [b2t_diffusion](b2t_diffusion).  
+<!-- ## Diffusion models with B2T
+To reproduce the diffusion model experiments, see [b2t_diffusion](b2t_diffusion).   -->
