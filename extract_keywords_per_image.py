@@ -72,7 +72,7 @@ if not os.path.exists(keyword_dir):
     os.makedirs(keyword_dir)
 
 # extract keyword
-if args.dataset == 'imagenet-r' or args.dataset == 'imagenet':
+if args.dataset == 'imagenet-r' or args.dataset == 'imagenet' or args.dataset == 'imagenet-c':
     df_wrong = df[df['correct'] == 0]
     df_correct = df[df['correct'] == 1]
     for labels in class_names: 
