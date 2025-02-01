@@ -256,8 +256,12 @@ def b2t(
 
         # calculate similarity
         print("Start calculating scores..")
-        similarity_wrong_class = calc_similarity(df_incorrect_class['image'], keywords_class, model, preprocess, device)
-        similarity_correct_class = calc_similarity(df_correct_class['image'], keywords_class, model, preprocess, device)
+        similarity_wrong_class = calc_similarity(
+            df_incorrect_class['image'], keywords_class, model, preprocess, device=device
+        )
+        similarity_correct_class = calc_similarity(
+            df_correct_class['image'], keywords_class, model, preprocess, device=device
+        )
 
         dist_class = similarity_wrong_class - similarity_correct_class
         
