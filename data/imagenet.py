@@ -5,12 +5,12 @@ Dataset classes for ImageNet and its variants
 Expects the following file structure:
 
     data
-    ↪ ImageNet
+    ↪ imagenet(_r)
         ↪ Wordnet ID #0
             ↪ Image #0
             ↪ ...
 
-    ↪ ImageNetC
+    ↪ imagenet_c
         ↪ Distortion #0
             ↪ Severity level #0
                 ↪ Wordnet ID #0

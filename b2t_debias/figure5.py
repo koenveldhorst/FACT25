@@ -29,13 +29,13 @@ def main(args):
     # load dataset
     if args.dataset == 'waterbirds':
         data_dir = os.path.join(args.data_dir, 'waterbird_complete95_forest2water2')
-        val_dataset = Waterbirds(data_dir=data_dir, split='val', transform=transform)
+        val_dataset = Waterbirds(root=data_dir, split='valid', transform=transform)
         templates = waterbirds_templates.templates
         class_templates = waterbirds_templates.class_templates
         class_keywords_all = waterbirds_templates.class_keywords_all
     elif args.dataset == 'celeba':
         data_dir = os.path.join(args.data_dir, 'celeba')
-        val_dataset = CelebA(data_dir=data_dir, split='val', transform=transform)
+        val_dataset = CelebA(root=data_dir, split='valid', transform=transform)
         templates = celeba_templates.templates
         class_templates = celeba_templates.class_templates
         class_keywords_all = celeba_templates.class_keywords_all
@@ -52,7 +52,6 @@ def main(args):
     with torch.no_grad():
         zeroshot_weights = []
         for class_keywords in class_keywords_all:
-            print('hi')
             texts = [template.format(class_template.format(class_keyword)) for template in templates for class_template in class_templates for class_keyword in class_keywords]
             texts = clip.tokenize(texts)
 
@@ -72,10 +71,12 @@ def main(args):
     celeba_pred = []
     celeba_actual = []
 
-    print('hii')
     with torch.no_grad():
-        for (image, (target, target_g, target_s), _) in tqdm(val_dataloader):
-            image = image.cuda()
+        for batch in tqdm(val_dataloader):
+            image = batch["img"].cuda()
+            target = batch["label"]
+            target_s = batch["spurious_label"]
+
             image_features = model.encode_image(image)
             image_features /= image_features.norm(dim=-1, keepdim=True)
 
